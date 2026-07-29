@@ -1,0 +1,18 @@
+# Query-allocation experiment (docs/results_2026-07-28.md S6e): power is limited by the
+# sample size of the MINOR mode, m*pi, not by the number of scales scanned. Fewer scales
+# with more probes each beats more scales with fewer probes on the weak-signal band.
+# This is exp_seattle_v3.py's protocol (3 scales x m=1000, same total query budget as
+# main_audit.yaml's 6 scales x 500).
+seed: 777
+
+audit:
+  scale_min_m: 25.0
+  scale_max_m: 1200.0
+  n_scales: 3
+  m_dip: 1000
+  m_rec: 1000
+  tau_obs: 0.010
+  tau_b: 0.25
+  penalty: 0.30
+  alpha: 0.05
+  min_component_mass: 20

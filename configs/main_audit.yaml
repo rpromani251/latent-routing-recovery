@@ -1,0 +1,16 @@
+# The headline production run (docs/results_2026-07-28.md S6d): naive scan over 6
+# log-spaced scales, 25-1200 m, on-manifold probes, dip + K=2 recovery at every scale,
+# Bonferroni over the scales actually dipped. This is exp_seattle_v2.py's protocol.
+seed: 777
+
+audit:
+  scale_min_m: 25.0
+  scale_max_m: 1200.0
+  n_scales: 6
+  m_dip: 500
+  m_rec: 500
+  tau_obs: 0.010
+  tau_b: 0.25
+  penalty: 0.30
+  alpha: 0.05
+  min_component_mass: 20   # v2 minimum-mass rule for the K=2 recovery

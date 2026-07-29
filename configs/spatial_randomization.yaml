@@ -1,0 +1,8 @@
+# Radius sweep for the alignment claim (docs/results_2026-07-28.md S7c). 800 m is the
+# operating point -- taken from the independently measured power-vs-distance curve, not
+# chosen for significance; the other radii are reported alongside it for auditability.
+n_perm: 399
+seed: 2026
+radii_m: [100, 400, 800]
+lat_range: [47.48, 47.75]
+lon_range: [-122.44, -122.24]

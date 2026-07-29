@@ -1,0 +1,755 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb,mathtools,bm}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{microtype}
+\usepackage[hidelinks]{hyperref}
+
+\definecolor{navy}{RGB}{25,55,92}
+\definecolor{muted}{RGB}{90,96,105}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Prob}{\mathbb{P}}
+\newcommand{\Ind}{\mathbf{1}}
+\newcommand{\simplex}{\Delta}
+\newcommand{\argmax}{\operatorname*{arg\,max}}
+\newcommand{\argmin}{\operatorname*{arg\,min}}
+\newcommand{\Dip}{\operatorname{Dip}}
+\newcommand{\diag}{\operatorname{diag}}
+\newcommand{\nullgen}{\widehat{\mathcal P}_0}
+\newcommand{\why}[1]{\par\noindent\textcolor{muted}{\small\itshape Why this step: #1}}
+
+\hypersetup{
+  pdftitle={Detect, Recover, Interpret (v2): Calibrated Black-Box Auditing of Hidden Routing Regimes},
+  pdfsubject={Revised working algorithm note},
+  pdfkeywords={black-box auditing, regime detection, null generator, selection-aware bootstrap, label synchronization, certified propagation}
+}
+
+\title{\textcolor{navy}{Detect, Recover, Interpret:\\
+Black-Box Auditing of Hidden Routing Regimes\\
+\large Revised algorithm note (v2): calibrated detection and certified recovery}}
+\author{Working algorithm note}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This revision restates the detection target and hardens the machinery of the three-stage
+auditing framework. The principal changes relative to v1 are:
+(1) the Stage~A null is reframed --- the tested hypothesis is compatibility with a
+\emph{calibrated smooth single-branch reference distribution}, not the literal statement
+$K=1$; rejection is evidence of boundary-like multiscale response geometry, consistent with
+latent routing subject to corroboration;
+(2) the ratio statistic $R_i$ is replaced by a stabilized log-range statistic and, preferably,
+a studentized deviation from a fitted smooth-null scale curve, with a minimum-signal
+abstention rule;
+(3) the null generator $\nullgen$ is made concrete as a hierarchical Gaussian-process model of
+single-branch local response surfaces, fitted robustly and cross-fitted for testing;
+(4) Benjamini--Hochberg screening is demoted to a screening device; the primary confirmatory
+claim is an omnibus selection-aware parametric bootstrap whose $p$-value has standard
+finite-simulation form and whose calibration is conditional on generator adequacy;
+(5) shape corroboration specifies its scalar projections explicitly;
+(6) Stage~B uses whitened features and soft mixture responsibilities, commits to a concrete
+partial-matching label-synchronization algorithm, fits gates by regularized responsibility-weighted
+logistic regression with stage-repeating bootstrap uncertainty, and replaces propagation
+through unflagged regions with bridge-probe \emph{edge certification}, on the principle that
+non-rejection is not evidence of interiority;
+(7) the audit design adds budget splitting, negative controls, and probe-support diagnostics;
+(8) Stage~C interpretation language is weakened to what the evidence supports. A closing
+section states what Stage~B still requires to reach Stage~A's level of maturity.
+\end{abstract}
+
+\section{Problem, target, and the precise detection claim}
+
+Let a black-box system be represented as
+\[
+  f(x)=f_{g(x)}(x)+\eta,
+\]
+where \(g:\mathcal X\to[K]\) is an unobserved routing rule, \(f_k\) is the response mechanism
+in regime \(k\), and \(\eta\) is observation or sampling noise. The auditor observes only
+queries and responses. For anchors \(x_1,\ldots,x_n\), a probe family
+\(Q_\sigma(\cdot\mid x_i)\) generates perturbations
+\[
+  \delta_{ij}^{(t)}\sim Q_{\sigma_t}(\cdot\mid x_i),
+  \qquad
+  \psi_{ij}^{(t)}=\psi\!\left(f(x_i+\delta_{ij}^{(t)})\right)\in\R^V,
+\]
+with response feature map \(\psi:\mathcal Y\to\R^V\). The local routing composition is
+\(\pi_i^\sigma(k)=\Prob_{\delta\sim Q_\sigma}[g(x_i+\delta)=k]\in\simplex^{K-1}\).
+The three goals remain separated: \textbf{detection} (Stage~A), \textbf{recovery} (Stage~B),
+and \textbf{interpretation} (Stage~C).
+
+\subsection{What Stage A does and does not test}
+\label{sec:claim}
+
+A single smooth mechanism can produce curvature-driven scale dependence, spatially varying
+derivatives, heteroskedastic output noise, anisotropic noise, sharp-but-continuous
+transitions, and unstable normalization at locally flat anchors. Conversely, genuine routing
+can remain invisible when branches overlap under \(\psi\), when probes move parallel to the
+gate, or when the local mixture is effectively unimodal. Stage~A therefore does not, and
+cannot, test the literal hypothesis \(K=1\). The tested null is
+\[
+  H_{0,i}:\ \text{anchor \(i\) follows the calibrated smooth single-branch null } \nullgen ,
+\]
+and the operational claim is:
+\begin{quote}
+\emph{Given a specified response representation \(\psi\), probe design
+\(\{Q_{\sigma_t}\}\), and null class, identify anchors whose multiscale response geometry is
+incompatible with the fitted reference distribution of single-branch smooth behavior.}
+\end{quote}
+Rejection is \emph{consistent with} boundary crossing or latent routing and must be
+corroborated by shape evidence (Stage~A.5), recovery structure (Stage~B), and mechanism
+analysis (Stage~C) before any routing language enters the audit finding. Both positive and
+negative findings are relative to \(\psi\), the probe design, and the null class: a
+sharp-but-continuous transition narrower than the probed scales is observationally equivalent
+to a routing boundary, and a mechanism switch invisible through \(\psi\) is undetectable in
+principle.
+
+\section{Audit design and budget discipline}
+\label{sec:design}
+
+\subsection{Budget split}
+\label{sec:budget}
+
+Partition the query budget into four disjoint samples:
+\begin{itemize}[leftmargin=1.8em]
+  \item \(\mathcal S_1\) --- detection and scale selection (Stage A.1--A.4);
+  \item \(\mathcal S_2\) --- modality confirmation at flagged anchors (Stage A.5);
+  \item \(\mathcal S_3\) --- mixture recovery, synchronization, and gate fitting (Stage B);
+  \item \(\mathcal S_4\) --- final held-out validation of every reported quantity.
+\end{itemize}
+The selection-aware bootstrap can in principle account for sample reuse, but a genuine
+held-out split is easier to defend and removes the dependence of confirmatory claims on
+correctly modeling the reuse. When the budget forces reuse, the bootstrap must reproduce it
+exactly (\S\ref{sec:bootstrap}).
+
+\subsection{Probe families and support diagnostics}
+\label{sec:support}
+
+Maintain at least two probe families: \emph{on-manifold} (perturbations consistent with the
+data distribution) and \emph{ambient} (e.g., isotropic Gaussian in input space), across a
+ladder \(\sigma_1<\cdots<\sigma_T\); feature-targeted probes may be added when a candidate
+gating feature exists. For every anchor and probe family, report a \emph{support realism
+score} for the perturbed inputs --- e.g., the quantile of their \(k\)NN distance to a
+reference sample of real inputs. Findings are reported stratified by support realism:
+``ambient-only'' evidence obtained at unrealistic inputs is explicitly qualified, since it may
+reflect behavior in operationally meaningless regions.
+
+\subsection{Negative controls}
+\label{sec:controls}
+
+Every audit run includes controls probed with the identical pipeline:
+smooth curved single-regime functions; heteroskedastic single-regime functions;
+discontinuous functions without latent routing (e.g., a single mechanism containing a hard
+kink); known benign mixtures of experts; and randomized or irrelevant probe directions.
+Controls establish whether the statistic responds specifically to boundary-like switching
+rather than to generic nonlinearity or noise structure. The discontinuous control also makes
+the observational-equivalence point of \S\ref{sec:claim} concrete: an intrinsic step inside
+one mechanism \emph{will} be flagged, because at the level of observable behavior it is a
+regime boundary; attributing mechanism is Stage~C's job, not Stage~A's.
+
+\section{Stage A: multi-scale detection}
+
+\subsection{A.1: Noise model, whitening, and the dispersion curve}
+\label{sec:whiten}
+
+Repeated unperturbed queries at each anchor (and pooled across anchors) yield an estimated
+observation-noise covariance \(\widehat\Sigma_{\mathrm{obs}}\in\R^{V\times V}\); when \(V\) is
+large relative to the number of repeats, use a shrinkage or low-rank estimator
+(e.g., Ledoit--Wolf). Whiten all response features:
+\[
+  \tilde\psi_{ij}^{(t)}=\widehat\Sigma_{\mathrm{obs}}^{-1/2}\,\psi_{ij}^{(t)} .
+\]
+\why{scalar noise-floor subtraction implicitly assumed isotropic noise; whitening makes the
+floor isotropic by construction, at the cost of requiring a stable covariance estimate.}
+
+With \(\tilde S_i(\sigma_t)\) the empirical scatter of
+\(\{\tilde\psi_{ij}^{(t)}\}_{j=1}^m\), the repeated-query scatter is \(\approx I\), so the
+excess top-eigenvalue spread per unit input scale is
+\[
+  r_i(\sigma_t)
+  =
+  \frac{\sqrt{\bigl(\lambda_{\max}(\tilde S_i(\sigma_t))-1\bigr)_+}}{\sigma_t}.
+\]
+For a locally linear single branch with whitened directional slope \(b_i\),
+\(\lambda_{\max}(\tilde S_i(\sigma))\approx 1+\sigma^2\|b_i\|^2\) and
+\(r_i(\sigma)\approx\|b_i\|\); curvature makes \(r_i\) rise with \(\sigma\) even under the
+null, which is why the null model must represent curvature (\S\ref{sec:generator}) rather
+than the statistic assuming linearity.
+
+\paragraph{Minimum-signal abstention.}
+If \(\lambda_{\max}(\tilde S_i(\sigma_t))-1\) is not significantly positive at any scale
+(one-sided test against the repeated-query eigenvalue distribution), the anchor is reported as
+\emph{insufficient signal}, which is distinct from \emph{null-consistent}: a locally flat
+model provides no information about boundaries, and a noise-dominated denominator must not
+enter any ratio or range statistic.
+\why{the v1 ratio could explode when one scale's spread was noise-underestimated; the anchor
+looked anomalous for reasons unrelated to any bump.}
+
+\subsection{A.2: Stabilized scale statistics}
+\label{sec:statistic}
+
+The v1 ratio \(R_i=\max_t r_i/\min_t r_i\) is deprecated: its denominator is unstable near
+flat regions, and its null distribution conflates bump detection with normalization noise.
+Two replacements, in increasing order of preference:
+\begin{enumerate}[label=\textbf{S\arabic*.},leftmargin=2.6em]
+  \item \textbf{Log-range.}
+  \[
+    R_i^{\log}
+    =\max_t \log\bigl(r_i(\sigma_t)+\epsilon\bigr)
+    -\min_t \log\bigl(r_i(\sigma_t)+\epsilon\bigr),
+  \]
+  with a fixed small \(\epsilon>0\), computed only on anchors passing the minimum-signal
+  condition. A robust default when no null generator is yet fitted.
+  \item \textbf{Studentized deviation from the fitted null scale curve.} With the null
+  generator of \S\ref{sec:generator} fitted, obtain by simulation (or GP analytics) the null
+  mean and standard deviation of the log dispersion curve at anchor \(i\),
+  \(\mu_{0,i}(\sigma_t)\) and \(s_{0,i}(\sigma_t)\), and set
+  \[
+    T_i^{\mathrm{scale}}
+    =\max_t\,
+    \frac{\log r_i(\sigma_t)-\mu_{0,i}(\sigma_t)}{s_{0,i}(\sigma_t)},
+    \qquad
+    \sigma_i^\star=\argmax_t\,
+    \frac{\log r_i(\sigma_t)-\mu_{0,i}(\sigma_t)}{s_{0,i}(\sigma_t)} .
+  \]
+  This asks the calibrated question directly: \emph{is the observed scale dependence larger
+  than the fitted population of smooth single-branch behaviors predicts at this anchor?}
+\end{enumerate}
+\why{a bump statistic should measure deviation from the null's own scale dependence,
+not deviation from flatness; curvature is a null feature, not evidence.}
+
+\subsection{A.3: The null generator \texorpdfstring{$\nullgen$}{P0}}
+\label{sec:generator}
+
+The null generator is the object on which all calibrated inference rests, so it is specified
+concretely. \(\nullgen\) is a fitted joint generative law over a \emph{complete synthetic
+audit dataset} --- all responses at all anchors, scales, and probes, plus repeats --- under
+the single-branch hypothesis. It must represent: (a) smooth local response surfaces with
+realistic slopes and curvatures; (b) cross-anchor variation in those slopes and curvatures;
+(c) observation noise, including heteroskedasticity across anchors; (d) spatial or batch
+dependence among anchors.
+
+\paragraph{Hierarchical GP specification (default).}
+At anchor \(i\), model each whitened response coordinate (or each of the leading response
+principal components) of the local surface as a Gaussian process in the perturbation:
+\[
+  m_i(\delta)\sim\mathcal{GP}\!\left(
+    \beta_i^\top\delta,\;
+    s_i^2\,k_\nu\!\left(\|\delta-\delta'\|/\ell_i\right)
+  \right),
+  \qquad
+  \tilde\psi_{ij}\mid m_i \sim
+  \mathcal N\!\left(m_i(\delta_{ij}),\,\Sigma_i^{\mathrm{noise}}\right),
+\]
+with Mat\'ern kernel \(k_\nu\). The hyperparameters have direct null meaning:
+\(\beta_i\) is the local linear slope, \(s_i\) the amplitude of smooth nonlinearity,
+\(\ell_i\) the curvature lengthscale, and \(\nu\) the differentiability class ---
+``how smooth is smooth'' is an explicit modeling choice rather than an implicit one.
+Cross-anchor structure is hierarchical: \((\log s_i,\log\ell_i,\beta_i)\) are drawn from
+population laws fitted across anchors, with spatially smooth mean fields when anchors are
+spatial; \(\Sigma_i^{\mathrm{noise}}\) comes from local repeats or a fitted variance
+function. Simulation is direct: draw hyperparameters, draw the surface values at the actual
+probe locations (a finite-dimensional Gaussian with the kernel Gram matrix), add noise ---
+one synthetic audit per replicate, at the original anchors, ladder, and probe counts, with
+spatial dependence simulated jointly by blocks.
+
+\paragraph{Fitting under contamination.}
+The null must be fitted from data that may contain alternatives. Options, in increasing order
+of strength:
+trimmed fitting that excludes anchors in the top fraction of a preliminary detection statistic
+(report sensitivity to the trimming fraction);
+a separate calibration anchor set never used for testing;
+and \textbf{cross-fitting} --- partition anchors into folds, test each fold against a
+generator fitted on the remaining folds. Cross-fitting is the default for anchor-level
+screening $p$-values.
+\why{fitting \(\widehat F_0\) or \(\nullgen\) on the same statistics being tested makes the
+null random, contaminated, and dependent on every observation; empirical-null BH over such
+fits has no automatic FDR guarantee.}
+
+\paragraph{Misspecification honesty.}
+The generator's smoothness class \emph{defines} the null of \S\ref{sec:claim}. A single
+mechanism with a transition sharper than \(\ell_i\) at the probed scales is outside the null
+and will be flagged; that is the intended behavior, and the finding is stated as boundary-like
+geometry, not as proof of a latent gate. Calibration of every downstream $p$-value is
+conditional on generator adequacy; the evaluation plan (\S\ref{sec:eval}) therefore includes
+misspecification experiments (heavy-tailed noise, unmodeled heteroskedasticity, kinks,
+wrong \(\nu\)) measuring realized error rates when the generator is wrong. Alternative null
+classes (local polynomial with random coefficients, splines) are acceptable substitutes; the
+GP default is chosen because smoothness is the null hypothesis and the GP parameterizes
+exactly smoothness with few, interpretable, estimable hyperparameters.
+
+\subsection{A.4: Screening and multiplicity}
+\label{sec:screening}
+
+Compute anchor-level screening $p$-values \(p_i\) for \(T_i^{\mathrm{scale}}\) (or
+\(R_i^{\log}\)) by simulation from the cross-fitted generator. Apply Benjamini--Hochberg at
+rate \(q\) to obtain the flagged set \(F\). In this framework BH is a \emph{screening
+device} that concentrates the confirmation budget; it is not reported as a final FDR
+guarantee, because the fitted null is estimated and anchors may be dependent. Dependence is
+addressed by blockwise simulation in the generator, block-level testing, or
+Benjamini--Yekutieli as sensitivity analyses. Formal error control lives in the omnibus
+bootstrap claim (\S\ref{sec:bootstrap}); anchor-level confirmatory claims additionally require
+the per-anchor selection-aware $p$-values with a dependence-robust multiplicity correction.
+\why{screening and confirmation are different jobs; conflating them forced v1's empirical-null
+BH to carry a calibration burden it could not meet.}
+
+\subsection{A.5: Shape corroboration with specified projections}
+\label{sec:dip}
+
+A dispersion bump is corroborated by evidence of multiple response populations. Hartigan's
+dip test is univariate, so the scalar projection must be specified:
+\begin{enumerate}[label=\textbf{P\arabic*.},leftmargin=2.6em]
+  \item \textbf{Default:} dip on the first principal-component score of the whitened
+  confirmation sample (\(\mathcal S_2\)) at \(\sigma_i^\star\).
+  \item \textbf{Prespecified set:} dip on a small fixed set of directions --- top two PCs
+  plus, when available, a candidate gating direction --- with Bonferroni correction over the
+  set.
+  \item \textbf{Projection pursuit (optional):} maximize a bimodality index over directions;
+  if used, the entire pursuit is repeated inside every bootstrap replicate.
+\end{enumerate}
+\paragraph{Known power limitation.} Principal components maximize variance, not between-regime
+separation; strong within-regime anisotropy can hide a mixture from the top PC. A
+non-significant dip therefore does not certify unimodality. Multivariate modality or
+clustering-based tests may replace the dip at the cost of harder calibration.
+\why{v1 said ``project onto leading directions and dip,'' which is ambiguous for \(d_i>1\)
+and silently favorable if the direction is tuned on the same data.}
+
+\subsection{A.6: Selection-aware bootstrap confirmation}
+\label{sec:bootstrap}
+
+When the same sample informs anchor, scale, or projection choices, confirmation must
+reproduce the complete search. Define
+\[
+  T_i^{\mathrm{obs}}
+  =\Ind\{i\in F^{\mathrm{obs}}\}\;
+  \Dip\!\left\{u_i^{\mathrm{obs}\top}\tilde\psi_{ij}^{(\star,\mathrm{obs})}\right\}_{j=1}^m,
+\]
+with \(u_i^{\mathrm{obs}}\) the specified projection of \S\ref{sec:dip}; setting the
+statistic to zero for unselected anchors makes screening part of the statistic. For
+\(b=1,\ldots,B\): generate a complete synthetic audit from \(\nullgen\); re-estimate the noise
+model and whitening; recompute dispersion curves and scale statistics; refit the cross-fitted
+nulls; rerun screening to get \(F^{(b)}\); re-derive projections; recompute
+\(T_i^{(b)}\). Every data-adaptive choice --- trimming fractions, fold assignments,
+\(K\)-selection rules, projection pursuit if used --- is repeated inside each replicate.
+The anchor-level bootstrap value is
+\[
+  \widehat p_i^{\mathrm{sel}}
+  =\frac{1+\sum_{b=1}^B\Ind\{T_i^{(b)}\ge T_i^{\mathrm{obs}}\}}{B+1},
+\]
+which has the correct finite-simulation form (and cannot return zero); its calibration is
+\emph{conditional on the adequacy of the fitted null generator} --- this is an approximate
+parametric bootstrap, not an exact test. The \textbf{primary existence claim} uses the
+omnibus statistics
+\[
+  T_{\max}^{\mathrm{obs}}=\max_i T_i^{\mathrm{obs}},
+  \qquad
+  T_{\max}^{(b)}=\max_i T_i^{(b)},
+\]
+whose tail probability automatically absorbs the search over anchors and avoids asserting
+anchor-level FDR before the null machinery is mature. Resampling only selected projections,
+or holding \(\sigma_i^\star\), \(u_i\), or \(F\) fixed after learning them, does not correct
+selection. A held-out \(\mathcal S_2\)/\(\mathcal S_4\) confirmation remains the cleanest
+design when the budget allows.
+
+\section{Stage B.1: query-level local decomposition}
+
+Stage B runs only at confirmed anchors, on the recovery sample \(\mathcal S_3\), in whitened
+coordinates. Conditional on its perturbation, query \(j\) has one latent label
+\(a_{ij}=g(x_i+\delta_{ij})\), even though the profile is an admixture.
+
+\subsection{Local mixtures and soft responsibilities}
+\label{sec:soft}
+
+At \(i\in F\), project the recovery sample to \(d_i\) leading whitened directions and fit
+mixtures for \(K_i^{\mathrm{loc}}\in\{1,\ldots,K_{\max}\}\), selected by held-out likelihood,
+bootstrap cluster stability, a complexity criterion, and a minimum-mass rule. Retain the
+posterior responsibilities
+\[
+  \gamma_{ij}(\ell)
+  =\widehat{\Prob}\bigl(a_{ij}=\ell\mid\tilde\psi_{ij}\bigr),
+\]
+component centroids \(\widehat\mu_{i\ell}\) and covariances \(\widehat C_{i\ell}\), and
+estimate compositions \emph{softly}:
+\[
+  \widehat\pi_i(\ell)=\frac{1}{m}\sum_{j=1}^m\gamma_{ij}(\ell).
+\]
+\why{hard-assignment frequencies are biased toward \(1/K\) under component overlap;
+responsibilities are the consistent estimator and propagate assignment uncertainty
+downstream.}
+The minimum-mass rule uses soft mass, \(m\,\widehat\pi_i(\ell)\ge n_{\min}\). The unperturbed
+response \(\tilde\psi_{i0}\) is assigned by posterior to a local component
+(\(\widehat z_i^{\mathrm{loc}}\)), identifying which branch owns the anchor; it is never
+treated as a pure global archetype.
+
+\section{Stage B.2: local-to-global alignment as partial-permutation synchronization}
+\label{sec:sync}
+
+Local labels are arbitrary, and --- because not every regime appears in every neighborhood ---
+the alignment problem is synchronization over \emph{partial} matchings, which is harder than
+synchronization over complete permutations. The committed algorithm:
+
+\begin{enumerate}[label=\textbf{SYNC\arabic*.},leftmargin=3.4em]
+  \item \textbf{Graph.} Build the anchor graph \(G\) from geographic, manifold, or
+  task-metric neighborhoods.
+  \item \textbf{Edge costs.} For edge \((i,j)\) and components \((\ell,r)\),
+  \[
+    c_{ij}(\ell,r)
+    =(\widehat\mu_{i\ell}-\widehat\mu_{jr})^\top
+     (\widehat C_{i\ell}+\widehat C_{jr}+\lambda I)^{-1}
+     (\widehat\mu_{i\ell}-\widehat\mu_{jr}),
+  \]
+  optionally augmented with local-slope and held-out predictive terms.
+  \item \textbf{Partial matching.} Solve a rectangular assignment with an unmatched
+  (dummy) option of cost \(\chi\), so components may remain unmatched. Default
+  \(\chi\): a high quantile (e.g.\ 0.95) of same-branch matching costs simulated from the
+  fitted within-regime continuity model, with sensitivity reported.
+  \item \textbf{Edge confidence.} Confidence of edge \((i,j)\) is the margin between its best
+  and second-best total assignment cost.
+  \item \textbf{Spanning forest and propagation.} Take the maximum-confidence spanning forest
+  of \(G\) (Kruskal on edge confidence) and propagate labels along it to define provisional
+  global classes.
+  \item \textbf{Cycle audit and abstention.} Every off-forest edge is re-matched
+  independently; the component-level cycle-consistency rate \(\rho_{cc}\) is the
+  confidence-weighted fraction of off-forest edges agreeing with the forest labeling.
+  Components with \(\rho_{cc}\) below threshold are abstained from, not forcibly
+  synchronized.
+  \item \textbf{Global count.} \(\widehat K\) is the number of global classes whose aggregate
+  soft mass exceeds a floor \emph{and} whose class survives in a stated fraction of Stage-B
+  bootstrap replicates (\S\ref{sec:gateuq}).
+\end{enumerate}
+\why{v1 said ``synchronize to cycle consistency,'' a problem statement rather than a
+procedure; the forest-plus-audit construction is implementable, and its failure mode
+(low \(\rho_{cc}\)) is an explicit abstention trigger.}
+
+Raw global clustering remains rejected: within one regime the response varies across the
+input space (\(w_k(x_i)\neq w_k(x_j)\)), so global clusters follow magnitude and covariates
+rather than mechanism; the local-to-global route follows smooth branches through overlapping
+neighborhoods. The three-regime Slack-style stack illustrates assembly: local views
+\(\{1,2\}\), \(\{1,3\}\), \(\{2,3\}\) under different probe families chain into one
+three-regime system through shared components, even if no unperturbed anchor sits in regime 3.
+
+\section{Stage B.3: gates, uncertainty, and certified propagation}
+
+\subsection{Regularized, responsibility-weighted gate fits}
+\label{sec:gate}
+
+At a flagged anchor with a locally binary boundary, fit
+\[
+  \Prob(a_{ij}=\ell\mid\delta_{ij})
+  =\operatorname{logit}^{-1}(\beta_{i0}+\beta_i^\top\delta_{ij})
+\]
+by minimizing the cross-entropy against the \emph{soft responsibilities}
+\(\gamma_{ij}(\ell)\) (equivalently, weighted logistic regression), with ridge
+regularization by default and Firth penalization for small local samples.
+\why{when clusters separate cleanly in \(\delta\)-space --- the good case --- the unpenalized
+MLE diverges; and hard labels overstate the information available.}
+Then \(\widehat\nu_i=\widehat\beta_i/\|\widehat\beta_i\|\) estimates the local boundary
+normal and the intercept its signed displacement; sparse fits identify candidate gating
+features; multiclass local fits serve junctions.
+
+\subsection{Stage-repeating uncertainty}
+\label{sec:gateuq}
+
+Ordinary logistic standard errors ignore mixture uncertainty, synchronization error,
+projection and scale selection, and label-assignment uncertainty. Gate (and composition, and
+\(\widehat K\)) uncertainty is therefore reported from a \textbf{Stage-B bootstrap} that
+resamples the recovery queries and repeats, per replicate: mixture fitting and
+\(K_i^{\mathrm{loc}}\) selection, responsibility computation, partial matching,
+synchronization, and gate fitting. Reported objects: normal cones for
+\(\widehat\nu_i\), intervals for offsets and \(\widehat\pi_i\), persistence frequencies for
+global classes.
+
+\subsection{Certified propagation: unflagged is not interior}
+\label{sec:certify}
+
+An unflagged anchor may be truly interior --- or underpowered, probed in the wrong
+directions, near a gate with overlapping outputs, part of a rare regime, or a multiplicity
+miss. Non-rejection is not evidence that no boundary exists, so labels are \emph{not}
+propagated through unflagged regions by default; doing so would confidently fill exactly the
+regions where detection lacked sensitivity. Instead, each graph edge used for propagation
+must be \textbf{certified} by bridge probes:
+
+\begin{enumerate}[label=\textbf{CERT\arabic*.},leftmargin=3.2em]
+  \item Place bridge points along the segment (or manifold path) between neighboring anchors
+  \(x_i,x_j\), and probe each with a small battery at a bridge scale.
+  \item The edge is \emph{certified same-branch} if every bridge point passes the
+  minimum-signal and dispersion checks with no modality evidence, and the unperturbed bridge
+  responses interpolate within the posterior predictive tube of a single-branch fit joining
+  the endpoint components.
+  \item The edge is \emph{certified crossing} if an interior bridge point is flagged;
+  bisection along the edge then localizes the boundary, feeding Stage C geometry.
+  \item Otherwise the edge is \emph{uncertifiable}; any label carried across it is reported
+  as \textsc{extrapolated}, severed from certified claims.
+\end{enumerate}
+Propagation abstains in graph components disconnected from any reliably labeled anchor and
+wherever multiple global labels remain plausible. Every reported regime map distinguishes
+\textsc{certified} from \textsc{extrapolated} territory.
+\why{this replaces v1's ``propagate into unflagged interior regions,'' which treated absence
+of evidence as evidence of absence.}
+
+\section{Complete annotated algorithm}
+\label{sec:algorithm}
+
+\paragraph{Stage A: detection.}
+\begin{enumerate}[label=\textbf{A\arabic*.},leftmargin=2.7em]
+  \item \textbf{Design.} Fix \(\psi\), probe families, ladder, anchors; split the budget
+  \(\mathcal S_1\)--\(\mathcal S_4\); register negative controls and support diagnostics.
+  \emph{Every later claim is relative to these choices; registering them first prevents
+  post-hoc tuning.}
+  \item \textbf{Noise and whitening.} Estimate \(\widehat\Sigma_{\mathrm{obs}}\) from
+  repeats (shrinkage if \(V\) large); whiten. \emph{Makes the noise floor isotropic so
+  eigenvalue excess is interpretable.}
+  \item \textbf{Dispersion curves.} Compute \(r_i(\sigma_t)\) on \(\mathcal S_1\); apply the
+  minimum-signal rule. \emph{Separates ``flat/no information'' from ``null-consistent.''}
+  \item \textbf{Null generator.} Fit the hierarchical GP \(\nullgen\) robustly
+  (trimmed/calibration-split), with cross-fitting folds for testing. \emph{The null is a
+  fitted population of smooth behaviors, so it must be estimated without contamination from
+  the anchors being tested.}
+  \item \textbf{Scale statistic and screening.} Compute \(T_i^{\mathrm{scale}}\) (or
+  \(R_i^{\log}\)); simulate cross-fitted screening \(p\)-values; BH at rate \(q\) as a
+  screening device to form \(F\). \emph{Concentrates the confirmation budget; carries no
+  final FDR claim.}
+  \item \textbf{Shape corroboration.} On \(\mathcal S_2\), dip test on the specified
+  projections at \(\sigma_i^\star\). \emph{A bump alone is not evidence of populations;
+  modality is the corroborating signature.}
+  \item \textbf{Confirmation.} Omnibus selection-aware bootstrap for the existence claim;
+  per-anchor \(\widehat p_i^{\mathrm{sel}}\) with dependence-robust correction for
+  anchor-level claims. \emph{All adaptive choices are inside the replicate; calibration is
+  conditional on \(\nullgen\).}
+\end{enumerate}
+
+\paragraph{Stage B: recovery (confirmed anchors only).}
+\begin{enumerate}[label=\textbf{B\arabic*.},leftmargin=2.7em]
+  \item \textbf{Recovery sample.} Fresh queries near \(\sigma_i^\star\) from
+  \(\mathcal S_3\). \emph{Severs recovery from selection.}
+  \item \textbf{Local mixtures.} Fit, select \(K_i^{\mathrm{loc}}\), retain
+  responsibilities; soft compositions \(\widehat\pi_i\). \emph{Soft estimates are consistent
+  under overlap and carry uncertainty forward.}
+  \item \textbf{Anchor orientation.} Posterior-assign \(\tilde\psi_{i0}\).
+  \emph{Identifies the branch owning the anchor without archetype assumptions.}
+  \item \textbf{Synchronization.} SYNC1--7: partial matching with dummy cost, confidence
+  forest, cycle audit, abstention, \(\widehat K\). \emph{Turns arbitrary local labels into
+  global identities with an explicit failure signal.}
+  \item \textbf{Gates.} Responsibility-weighted ridge/Firth logistic; sparse variant for
+  gating features. \emph{Regularization survives clean separation; weights carry mixture
+  uncertainty.}
+  \item \textbf{Certification.} Bridge-probe certification of every propagation edge;
+  bisection localizes crossings. \emph{Non-rejection at an anchor never licenses
+  propagation through it.}
+  \item \textbf{Propagation.} Labels flow only across certified same-branch edges; all else
+  \textsc{extrapolated} or abstained. \emph{Certified and extrapolated territory are never
+  mixed in one claim.}
+  \item \textbf{Stage-B bootstrap.} Repeat B2--B7 per replicate for uncertainty on
+  \(\widehat\pi_i\), \(\widehat\nu_i\), \(\widehat K\), and label persistence.
+  \emph{Uncertainty must include every estimated layer, not only the last one.}
+\end{enumerate}
+
+\paragraph{Stage C: interpretation.}
+\begin{enumerate}[label=\textbf{C\arabic*.},leftmargin=2.7em]
+  \item \textbf{Mechanism characterization.} Features, thresholds, or boundary maps
+  predicting recovered labels and normals, with uncertainty. \emph{Converts geometry into a
+  candidate mechanism.}
+  \item \textbf{Consequential association.} Association of routing with protected
+  attributes, geography, outcomes; spatially aware inference. \emph{The audit question is
+  who is affected, not only whether structure exists.}
+  \item \textbf{Probe-support comparison.} Contrast on-manifold, ambient, and
+  feature-targeted findings, stratified by support realism. \emph{Different supports see
+  different edges of the same system.}
+  \item \textbf{Report.} Existence, structure, interpretation stated separately with
+  abstentions and controls. \emph{Later-stage failure does not erase earlier-stage
+  evidence.}
+\end{enumerate}
+
+\section{Stage B assumptions and diagnostics}
+\label{sec:assumptions}
+
+Fix an anchor \(x_i\); write \(Y_{ij}=\psi(f(x_i+\delta_{ij}))\), hidden labels
+\(A_{ij}=g(x_i+\delta_{ij})\), compositions \(\pi_i(k)\), and regime-conditioned laws
+\(P_{ik}\). Recovery is not assumption-free; each assumption is paired with a diagnostic and
+an abstention condition.
+
+\paragraph{B1 (stationarity).} One stable routing law governs the audit:
+\(A_{ij}=g(x_i+\delta_{ij})\), with any randomness stationary. Rules out a stateful
+adversary recognizing audit traffic. \emph{Diagnostic:} interleave disguised and audit
+queries; test batchwise drift; withhold static recovery under material drift.
+
+\paragraph{B2 (probe accessibility).} Every recovered regime is reached by some probe family:
+\(\exists\,i:\pi_i(k)\ge\pi_{\min}>0\). \(\widehat K\) counts observable, probe-accessible
+regimes, not internal code paths. \emph{Diagnostic:} compare scales and supports; label
+support-specific modes as such.
+
+\paragraph{B3 (local distinguishability).} Locally present regimes differ in law:
+\(P_{ik}\neq P_{i\ell}\), with bounded optimal local classification error
+\(\inf_h\Prob(h(Y_{ij})\neq A_{ij}\mid x_i)\le\varepsilon_{\mathrm{loc}}\). No Gaussian
+assumption is intrinsic. \emph{Diagnostic:} held-out likelihood, stability, separation
+statistics; decline decomposition when unstable.
+
+\paragraph{B4 (prevalence).} \(m\,\pi_i(k)\ge n_{\min}\) (soft mass). Rare components are
+not practically recoverable. \emph{Diagnostic:} report soft masses and CIs; merge or omit
+failing components.
+
+\paragraph{B5 (within-regime continuity).}
+\(d_{\mathcal P}(P_{ik},P_{jk})\le L\,d_{\mathcal X}(x_i,x_j)\) for neighbors on one branch;
+permits drifting \(w_k(x)\), forbids nothing about global variation. \emph{Diagnostic:}
+smoothness of matched centroids/covariances along the graph.
+
+\paragraph{B6 (matching margin).}
+\(d_{\mathcal P}(P_{ik},P_{jk})+\gamma<\min_{\ell\neq k}d_{\mathcal P}(P_{ik},P_{j\ell})\),
+\(\gamma>0\); otherwise branches can cross and exchange identities unobserved.
+\emph{Diagnostic:} report best-vs-second-best margins, match-stability bootstrap,
+\(\rho_{cc}\).
+
+\paragraph{B7 (overlap connectivity).} Local views must chain (e.g.\ \(\{1,2\},\{2,3\},
+\{3,4\}\)); the anchor--regime bipartite graph must be connected over each recovered family.
+\emph{Diagnostic:} connectivity and articulation points; deletion stability; disconnected
+families reported separately.
+
+\paragraph{B8 (anchor fidelity).} \(A_{i0}=g(x_i)\): the unperturbed query is routed by the
+same mechanism. Used only for orientation. \emph{Diagnostic:} repeated unperturbed queries
+consistently join one component.
+
+\paragraph{B9 (gate regularity).} Near a binary boundary, a local linear approximation
+\(\beta_{i0}+\beta_i^\top\delta=0\) is adequate at the probed scale; sparsity is an
+additional assumption used only when claiming a gating feature. \emph{Diagnostic:} held-out
+label prediction; linear-vs-nonlinear comparison; spatial coherence of normals.
+
+\paragraph{B10 (transversality).} \(\nu_i^\top\Sigma_{\mathrm{probe}}\nu_i>0\); probes
+parallel to the boundary see nothing. \emph{Diagnostic:} compare supports; negative
+conclusions stay scale- and support-relative.
+
+\paragraph{Identifiability statement.} Under B1--B10 the target is recovery of observable
+regimes up to global label permutation. Semantic names (``biased,'' ``innocuous'') are
+produced by Stage C, never by clustering.
+
+\section{Stage C: interpretation and audit finding}
+\label{sec:stagec}
+
+Multiple regimes do not imply misconduct; benign mixtures of experts, safety mechanisms, and
+operational controllers are legitimately gated. Stage C characterizes the mechanism
+(features, thresholds, boundary maps with uncertainty), tests consequential association
+(protected attributes, geography, energy burden, service quality, error rates --- with
+spatially aware inference), and compares probe supports with deliberately weakened language:
+ambient-only evidence is \emph{consistent with} an off-manifold scaffold; on-manifold
+evidence indicates behavior relevant to the modeled data support; a claim of misconduct
+requires a separate interpretation and impact analysis beyond either. The reporting contract
+separates \textbf{existence} (calibrated Stage-A evidence), \textbf{structure} (regimes,
+compositions, partition, gates, with uncertainty, certification status, and abstentions), and
+\textbf{interpretation} (the argued connection to a consequential or adversarial mechanism).
+Failure at a later stage does not erase an earlier result.
+
+\section{Validation and abstention contract}
+\label{sec:abstention}
+
+Recovery is withheld or qualified when any of the following fail: minimum-signal condition;
+calibrated screening and omnibus confirmation; cluster stability under bootstrap and held-out
+prediction; robustness of \(K_i^{\mathrm{loc}}\) to tuning; component separation relative to
+within-component covariance; matching margins and cycle consistency \(\rho_{cc}\);
+cross-support compatibility of shared components; held-out reconstruction of labels and
+responses; edge certification along every propagation path; negative-control sanity (controls
+must not be flagged at rates above their nominal levels); support realism thresholds for any
+finding claimed to be operationally meaningful.
+
+Reported quantities: omnibus and per-anchor selection-adjusted \(p\)-values;
+insufficient-signal, abstention, and certification rates; cluster stability; component
+separation; \(\rho_{cc}\); held-out assignment error; soft-composition intervals; normal
+cones; \(\widehat K\) persistence; negative-control outcomes; support realism distributions.
+
+\section{Relationship to separable profile-mean recovery}
+\label{sec:spa}
+
+The profile-mean approach factors \(M=WH+N\) and identifies simplex vertices from pure or
+nearly pure columns (SPA with simplex-constrained regression). It requires separability,
+constant mode signatures \(w_k\), and survives on profile means --- averaging away exactly
+the within-profile multimodality that Stage B consumes. The present route replaces
+separability with B1--B10, allows \(w_k(x)\) to drift (B5), and moves the difficulty from
+vertex identification to local mixture estimation plus partial-permutation synchronization.
+Neither dominates universally; when both structures hold, SPA provides a cross-check, and the
+evaluation plan includes it as a baseline.
+
+\section{Evaluation plan}
+\label{sec:eval}
+
+\paragraph{Suites.}
+(1) smooth single-regime nulls with varying slope and curvature;
+(2) heteroskedastic and anisotropic-noise single-regime nulls;
+(3) two-regime threshold gates with controlled jump, noise, spatial dependence;
+(4) three-regime Slack-style stacks with separate on-manifold and ambient probes;
+(5) overlapping regimes approaching the distinguishability limit;
+(6) disconnected coverage and deliberately inconsistent matchings;
+(7) \textbf{misspecification}: heavy-tailed noise, unmodeled heteroskedasticity, kinks,
+wrong Mat\'ern \(\nu\), adversarial smoothing near probe scales;
+(8) \textbf{adaptive adversary probes}: response smoothing, noise inflation, probe-pattern
+detection (scoped; full treatment deferred);
+(9) baselines: SPA profile-mean recovery, global clustering, residual-outlier auditing,
+detector-boundary anomaly flagging.
+
+\paragraph{Metrics.}
+Detection: realized FDR and power against jump size and noise; calibration curves of nominal
+vs.\ realized error under correct and misspecified generators; stability comparison of
+\(R_i\) (v1 ratio) vs.\ \(R_i^{\log}\) vs.\ \(T_i^{\mathrm{scale}}\); negative-control flag
+rates. Recovery: query-label accuracy up to permutation; \(\|\widehat\pi_i-\pi_i\|\);
+partition accuracy on certified territory; \(\widehat K\) distribution; boundary-normal
+angular error; certification precision (rate at which certified same-branch edges truly
+contain no crossing). Abstention: \textbf{operating characteristics} --- abstention rate in
+non-identifiable settings vs.\ identifiable ones; the method should abstain where it should
+and rarely where it should not.
+
+\section{Bringing Stage B to Stage A's level}
+\label{sec:parity}
+
+Stage A now has a precise null claim, a concrete calibration route, a stabilized statistic,
+and a falsification plan. Stage B reaches the same standard when it has:
+
+\begin{enumerate}[label=\textbf{P\arabic*.},leftmargin=2.6em]
+  \item \textbf{A formal estimand and loss.} The target: the restriction of the partition
+  \(\{g^{-1}(k)\}\) to probe-accessible territory, up to label permutation; the composition
+  field \(\pi_i\); local normals \(\nu_i\). Losses: permutation-minimized partition error on
+  certified territory, \(\|\widehat\pi_i-\pi_i\|\), angular normal error. Stage A has a
+  hypothesis; Stage B needs an estimand of the same precision.
+  \item \textbf{Fully committed procedures.} This note commits the synchronization
+  (SYNC1--7) and certification (CERT1--4) algorithms; remaining freedom --- \(\chi\),
+  confidence thresholds, \(n_{\min}\), bridge densities --- needs registered defaults with
+  sensitivity analyses, so that two auditors given the same data produce the same output.
+  \item \textbf{Uncertainty that propagates every layer.} The Stage-B bootstrap of
+  \S\ref{sec:gateuq} must cover mixture fitting, model selection, matching,
+  synchronization, and gate fitting jointly; reported intervals that skip a layer are
+  understatements.
+  \item \textbf{A theorem-shaped target.} Minimal version: under B3--B7 with margin
+  \(\gamma\), matching-cost concentration, and per-edge certified-matching error
+  \(\alpha_e\), forest propagation recovers global labels up to permutation with probability
+  at least \(1-\sum_{e\in\text{forest}}\alpha_e\); local clustering error enters
+  \(\alpha_e\) through existing finite-sample mixture bounds; soft compositions satisfy a
+  CLT under the local model. None of this is claimed proven here; it is the target that
+  makes Stage B a result rather than a pipeline.
+  \item \textbf{Abstention operating characteristics.} Quantitative evidence, from suite
+  (6) and the misspecification suite, that the diagnostics abstain when assumptions fail
+  --- ``knows when it does not know'' as a measured property, not a design intention.
+  \item \textbf{Inherited selection discipline.} Stage B runs on selected anchors;
+  estimates reusing selection data inherit winner's-curse bias. The budget split
+  (\(\mathcal S_3\), \(\mathcal S_4\)) is the design-level fix; any reuse must enter the
+  Stage-B bootstrap.
+\end{enumerate}
+
+\section{Claim boundary}
+\label{sec:boundary}
+
+This note specifies a complete, revised algorithmic proposal. The central research risk is no
+longer whether the recovery idea makes sense; it is whether Stage A can make a precise,
+calibrated claim that distinguishes boundary-like latent behavior from ordinary smooth
+complexity, heteroskedasticity, and null-model misspecification. That is addressed by the
+concrete null generator, cross-fitted and simulation-calibrated inference, the stabilized
+scale statistic, and the falsification suites --- and it must be demonstrated empirically
+before Stage A is presented as a result. Stage B is presented honestly as a partially
+specified structural-recovery layer whose outputs are reported only where synchronization,
+certification, and gate diagnostics pass, with \S\ref{sec:parity} as its maturation
+contract. Detection remains the most developed component; recovery is the proposed next
+stage; interpretation is a substantive argument, not an algorithmic output.
+
+\end{document}

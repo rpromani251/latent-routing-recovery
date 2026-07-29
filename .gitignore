@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# AI assistant config
+.claude/
+.codex/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Data (too large for git, shared with the geospatial-xai-attacks repo -- see
+# docs/data_dependencies.md)
+data/raw/
+data/processed/
+
+# Results / outputs
+results/
+
+# Model/data artifacts
+*.pkl
+*.joblib
+*.npz
+*.npy
+
+# Caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/

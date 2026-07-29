@@ -1,0 +1,10 @@
+# Honest EUI model + tract-demographics raster (scripts/build_model.py)
+model:
+  n_knots: 6
+  degree: 3
+  ridge_alpha: 2.0
+  grid_n: 1600      # b(lat, lon) raster resolution
+
+gate:
+  tau_b: 0.25       # tract Black/Latino share threshold
+  penalty: 0.30     # subtractive penalty in log-EUI
