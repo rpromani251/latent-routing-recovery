@@ -22,7 +22,7 @@ Analytic expectation
 
   R_log = max - min scores both shapes. T_iso scores only the non-monotone one.
 
-Run:  python -m src.routing_audit.legacy.control_curvature
+Run:  python -m src.detect_recover_interpret.legacy.control_curvature
 """
 import numpy as np
 import matplotlib

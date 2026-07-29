@@ -18,9 +18,9 @@ DATA DEPENDENCY: this diagnostic runs against the *original* Phase 1/2 housing d
 from the sibling `geospatial-xai-attacks` repo
 (`data/processed/seattle_housing_with_demographics.csv`), not this repo's Seattle EUI
 data. It is not reproducible from this repo alone — pass --geo-xai-repo to point at a
-checkout of that repo, or set ROUTING_AUDIT_GEOXAI_REPO.
+checkout of that repo, or set DRI_GEOXAI_REPO.
 
-Run:  python -m src.routing_audit.legacy.diag_model_class [--geo-xai-repo PATH]
+Run:  python -m src.detect_recover_interpret.legacy.diag_model_class [--geo-xai-repo PATH]
 """
 import argparse
 import os
@@ -122,7 +122,7 @@ def main(geo_xai_repo: Path):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--geo-xai-repo", type=Path,
-                     default=Path(os.environ.get("ROUTING_AUDIT_GEOXAI_REPO",
+                     default=Path(os.environ.get("DRI_GEOXAI_REPO",
                                                   "../geospatial-xai-attacks")))
     args = ap.parse_args()
     main(args.geo_xai_repo)

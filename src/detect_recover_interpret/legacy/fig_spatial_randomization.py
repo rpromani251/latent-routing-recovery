@@ -6,7 +6,7 @@ utilities are NOT superseded and live in ..spatial_randomization; this script is
 standalone figure built on the superseded protocol's flag column. Current usage is inside
 scripts/make_figures.py and scripts/experiments/spatial_randomization.py.
 
-Run:  python -m src.routing_audit.legacy.fig_spatial_randomization
+Run:  python -m src.detect_recover_interpret.legacy.fig_spatial_randomization
 """
 import numpy as np, pandas as pd
 import matplotlib; matplotlib.use("Agg")

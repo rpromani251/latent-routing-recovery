@@ -10,10 +10,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 
-DATA_RAW = Path(os.environ.get("ROUTING_AUDIT_DATA_RAW", ROOT / "data" / "raw"))
-DATA_PROCESSED = Path(os.environ.get("ROUTING_AUDIT_DATA_PROCESSED", ROOT / "data" / "processed"))
-RESULTS = Path(os.environ.get("ROUTING_AUDIT_RESULTS", ROOT / "results"))
-FIGURES = Path(os.environ.get("ROUTING_AUDIT_FIGURES", ROOT / "results" / "figures"))
+DATA_RAW = Path(os.environ.get("DRI_DATA_RAW", ROOT / "data" / "raw"))
+DATA_PROCESSED = Path(os.environ.get("DRI_DATA_PROCESSED", ROOT / "data" / "processed"))
+RESULTS = Path(os.environ.get("DRI_RESULTS", ROOT / "results"))
+FIGURES = Path(os.environ.get("DRI_FIGURES", ROOT / "results" / "figures"))
 
 SEATTLE_EUI_CSV = DATA_RAW / "seattle_building_energy_benchmarking.csv"
 TRACT_DEMOGRAPHICS_GEOJSON = DATA_PROCESSED / "king_county_tracts_demographics.geojson"

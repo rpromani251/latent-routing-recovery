@@ -7,7 +7,7 @@ Expects the batches written by legacy/seattle_audit_v1.py, concatenated into a s
 `legacy_audit_seattle.csv` under results/ (concatenation across index batches is a manual
 step, same as in the original pipeline).
 
-Run:  python -m src.routing_audit.legacy.fig_seattle_map
+Run:  python -m src.detect_recover_interpret.legacy.fig_seattle_map
 """
 import json
 

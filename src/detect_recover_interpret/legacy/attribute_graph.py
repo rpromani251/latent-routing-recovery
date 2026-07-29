@@ -31,7 +31,7 @@ under a perfectly smooth model with NO gate at all. On-manifold probing requires
 probe distribution itself to be locally smooth in the probe metric -- geography happened
 to satisfy this by luck, not by principle.
 
-Run:  python -m src.routing_audit.legacy.attribute_graph <i0> <i1> <tag>
+Run:  python -m src.detect_recover_interpret.legacy.attribute_graph <i0> <i1> <tag>
 """
 import sys
 

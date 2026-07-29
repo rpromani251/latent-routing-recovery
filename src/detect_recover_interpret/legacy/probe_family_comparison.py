@@ -14,7 +14,7 @@ BUDGET SPLIT (v2 2.1) -- three independent draws, never reused:
   S2  dip confirmation at sigma*
   S3  K=2 mixture recovery at sigma*
 
-Run:  python -m src.routing_audit.legacy.probe_family_comparison <i0> <i1> <tag>
+Run:  python -m src.detect_recover_interpret.legacy.probe_family_comparison <i0> <i1> <tag>
 """
 import sys
 

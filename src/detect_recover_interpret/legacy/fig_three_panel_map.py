@@ -8,7 +8,7 @@ SUPERSEDED — see legacy/README.md. Current figures come from scripts/make_figu
 
 Expects `legacy_audit_seattle.csv` (see legacy/seattle_audit_v1.py) under results/.
 
-Run:  python -m src.routing_audit.legacy.fig_three_panel_map
+Run:  python -m src.detect_recover_interpret.legacy.fig_three_panel_map
 """
 import json
 

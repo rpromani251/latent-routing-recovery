@@ -7,7 +7,7 @@ Expects `legacy_onman_seattle.csv` (see legacy/probe_family_comparison.py, with 
 `{kind}_flag_bh` column added per probe family via `dispersion.benjamini_hochberg` on
 `{kind}_g_dip_p`) under results/.
 
-Run:  python -m src.routing_audit.legacy.fig_recovery_results
+Run:  python -m src.detect_recover_interpret.legacy.fig_recovery_results
 """
 import numpy as np, pandas as pd
 import matplotlib; matplotlib.use("Agg")

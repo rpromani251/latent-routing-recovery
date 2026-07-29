@@ -15,7 +15,7 @@ Reported per building:
   d_bound     true metres to the nearest gate boundary, for scoring only --
               never an estimator input
 
-Run:  python -m src.routing_audit.legacy.seattle_audit_v1 <i0> <i1> <tag>
+Run:  python -m src.detect_recover_interpret.legacy.seattle_audit_v1 <i0> <i1> <tag>
 (expects seattle_buildings.csv / seattle_prep.npz / seattle_model.pkl in data/processed/,
  see scripts/build_model.py)
 """

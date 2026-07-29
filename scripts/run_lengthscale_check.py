@@ -27,9 +27,9 @@ import matplotlib.pyplot as plt
 from scipy import stats
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from src.routing_audit import paths
-from src.routing_audit.legacy.null_generator import fit_null_hyper
-from src.routing_audit.location_terms import build_location_terms, M_LAT, M_LON
+from src.detect_recover_interpret import paths
+from src.detect_recover_interpret.legacy.null_generator import fit_null_hyper
+from src.detect_recover_interpret.location_terms import build_location_terms, M_LAT, M_LON
 
 SIG_M = np.geomspace(25.0, 1200.0, 12)
 M_PROBE = 200

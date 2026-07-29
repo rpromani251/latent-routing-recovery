@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Run the current production audit protocol (naive multi-scale dip scan + K=2 recovery,
-on-manifold probes) over all Seattle buildings. See src/routing_audit/audit.py for the
+on-manifold probes) over all Seattle buildings. See src/detect_recover_interpret/audit.py for the
 per-building logic and docs/results_2026-07-28.md S6d for the headline numbers this
 reproduces.
 
@@ -20,10 +20,10 @@ import yaml
 from scipy.spatial import cKDTree
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from src.routing_audit import paths
-from src.routing_audit.audit import AuditConfig, run_audit_batch
-from src.routing_audit.location_terms import build_location_terms, M_LAT, M_LON
-from src.routing_audit.probes import Probe
+from src.detect_recover_interpret import paths
+from src.detect_recover_interpret.audit import AuditConfig, run_audit_batch
+from src.detect_recover_interpret.location_terms import build_location_terms, M_LAT, M_LON
+from src.detect_recover_interpret.probes import Probe
 
 
 def load_config(path):

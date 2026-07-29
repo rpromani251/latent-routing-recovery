@@ -31,9 +31,9 @@ from scipy import stats
 from scipy.spatial import cKDTree
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from src.routing_audit import paths
-from src.routing_audit.location_terms import build_location_terms, M_LAT, M_LON
-from src.routing_audit.probes import Probe, respond
+from src.detect_recover_interpret import paths
+from src.detect_recover_interpret.location_terms import build_location_terms, M_LAT, M_LON
+from src.detect_recover_interpret.probes import Probe, respond
 
 SIG_M = np.geomspace(25.0, 1200.0, 12)
 M_PROBE = 200

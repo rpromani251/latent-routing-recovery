@@ -28,9 +28,9 @@ import matplotlib; matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from src.routing_audit.dispersion import dispersion_curve, r_log, MIN_VALID_SCALES
-from src.routing_audit.gp_utils import rff_gp_path
-from src.routing_audit import paths
+from src.detect_recover_interpret.dispersion import dispersion_curve, r_log, MIN_VALID_SCALES
+from src.detect_recover_interpret.gp_utils import rff_gp_path
+from src.detect_recover_interpret import paths
 
 RNG = np.random.default_rng(20260728)
 

@@ -24,12 +24,12 @@ from matplotlib.lines import Line2D
 from scipy.spatial import cKDTree
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from src.routing_audit import spatial_randomization as SR
-from src.routing_audit import paths
-from src.routing_audit.model import TAU_B, PENALTY, b_lookup
-from src.routing_audit.conformal import conformal_report
-from src.routing_audit.location_terms import build_location_terms, M_LAT, M_LON
-from src.routing_audit.probes import Probe, respond
+from src.detect_recover_interpret import spatial_randomization as SR
+from src.detect_recover_interpret import paths
+from src.detect_recover_interpret.model import TAU_B, PENALTY, b_lookup
+from src.detect_recover_interpret.conformal import conformal_report
+from src.detect_recover_interpret.location_terms import build_location_terms, M_LAT, M_LON
+from src.detect_recover_interpret.probes import Probe, respond
 
 LAT = (47.49, 47.74); LON = (-122.44, -122.24)
 ASPECT = 1 / np.cos(np.deg2rad(47.61))

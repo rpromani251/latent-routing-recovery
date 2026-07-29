@@ -9,7 +9,7 @@ SUPERSEDED — see legacy/README.md. Kept for provenance; not used by run_all.sh
 Nulls are literal draws from the registered class (SE-GP sample paths + linear mean).
 The number that matters is the WORST-CASE null flag rate.
 
-Run:  python -m src.routing_audit.legacy.toy_calibrated_statistic
+Run:  python -m src.detect_recover_interpret.legacy.toy_calibrated_statistic
 """
 import numpy as np
 import matplotlib; matplotlib.use("Agg")

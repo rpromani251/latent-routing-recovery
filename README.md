@@ -1,4 +1,4 @@
-# routing-audit
+# detect-recover-interpret
 
 Black-box detection and recovery of a hidden decision boundary inside a deployed model —
 via on-manifold probing and the *modality* of the response distribution, not its spread.
@@ -55,7 +55,7 @@ implementation; the SBM/pEx thread and the original Phase 1–2 fooling-XAI work
   repo's findings revise).
 - **Data setup:** [`docs/data_dependencies.md`](docs/data_dependencies.md).
 - **What moved to `legacy/` and why:**
-  [`src/routing_audit/legacy/README.md`](src/routing_audit/legacy/README.md).
+  [`src/detect_recover_interpret/legacy/README.md`](src/detect_recover_interpret/legacy/README.md).
 
 ## The current method, in one pass
 
@@ -72,7 +72,7 @@ implementation; the SBM/pEx thread and the original Phase 1–2 fooling-XAI work
    geometry fixed) for the alignment claim — valid under arbitrary spatial dependence,
    no independence assumption.
 
-See `src/routing_audit/audit.py` for the implementation and `configs/main_audit.yaml`
+See `src/detect_recover_interpret/audit.py` for the implementation and `configs/main_audit.yaml`
 for the exact settings behind the headline numbers.
 
 ## Reproduce
@@ -93,7 +93,7 @@ each for usage.
 
 ## Layout
 
-- `src/routing_audit/` — library code: honest model + gate (`model.py`), probe families
+- `src/detect_recover_interpret/` — library code: honest model + gate (`model.py`), probe families
   (`probes.py`), the production audit protocol (`audit.py`), dispersion-curve utilities
   kept for validation/corroboration (`dispersion.py`), spatial-randomization utilities
   (`spatial_randomization.py`), conditional-coverage conformal check (`conformal.py`).

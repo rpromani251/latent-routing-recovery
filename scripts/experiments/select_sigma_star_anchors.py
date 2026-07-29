@@ -17,7 +17,7 @@ from pathlib import Path
 import numpy as np, pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from src.routing_audit import paths
+from src.detect_recover_interpret import paths
 
 
 def main():

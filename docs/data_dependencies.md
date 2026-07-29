@@ -17,7 +17,7 @@ python scripts/download_seattle_data.py --url "<export URL from the dataset's Ex
 
 or download it by hand from the portal and place it at the path above.
 
-Expected columns (used by `src/routing_audit/model.py:load_buildings`): `OSEBuildingID`,
+Expected columns (used by `src/detect_recover_interpret/model.py:load_buildings`): `OSEBuildingID`,
 `Latitude`, `Longitude`, `SiteEUIWN(kBtu/sf)`, `PropertyGFATotal`, `YearBuilt`,
 `NumberofFloors`, `NumberofBuildings`, `LargestPropertyUseType`, `Neighborhood`,
 `DataYear`, and optionally `Demolished`.

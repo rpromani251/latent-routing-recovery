@@ -19,9 +19,9 @@ import numpy as np, pandas as pd
 import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from src.routing_audit import paths
-from src.routing_audit import spatial_randomization as SR
-from src.routing_audit.model import TAU_B
+from src.detect_recover_interpret import paths
+from src.detect_recover_interpret import spatial_randomization as SR
+from src.detect_recover_interpret.model import TAU_B
 
 DELTA_FILTER = 0.15
 

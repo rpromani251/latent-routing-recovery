@@ -2,7 +2,7 @@
 
 Superseded protocols and one negative result, kept for provenance rather than deleted.
 Nothing in this package is imported by `scripts/run_all.sh` or the current pipeline in
-`src/routing_audit/`. Each module below is explained in more depth in
+`src/detect_recover_interpret/`. Each module below is explained in more depth in
 [`docs/results_2026-07-28.md`](../../../docs/results_2026-07-28.md).
 
 | module | what it was | why it's here, not in the current pipeline |
