@@ -1,0 +1,63 @@
+# Registered quantities for the routing-audit thread (July 2026).
+#
+# These are MEASURED or DECLARED values that the per-protocol configs
+# (main_audit.yaml, query_reallocation.yaml, spatial_randomization.yaml) depend on but
+# do not themselves define. Every number in docs/results_2026-07-28.md and
+# docs/consolidated_draft_v3.pdf traces to these.
+
+data:
+  target: log SiteEUIWN (kBtu/sf/yr)
+  year_filter: latest DataYear
+  eui_range: [1, 1000]
+  bbox: {lat: [47.4, 47.8], lon: [-122.5, -122.2]}
+  n_buildings: 3581
+
+gate:
+  b: tract Black/Latino share (king_county_tracts_demographics.geojson)
+  tau_b: 0.25
+  penalty: 0.30            # subtractive in log-EUI; exp(-0.30) = 0.74
+  raster_n: 1600           # NOTE: results_2026-07-28.md S6 text says "1200^2";
+                           # the code value 1600 is authoritative (configs/model.yaml)
+
+honest_model:
+  type: spline + ridge (SplineTransformer n_knots=6 degree=3, Ridge alpha=2.0)
+  r2: 0.338
+  curvature_amplitude: 0.004     # measured, results S4b; 75x below the 0.30 penalty
+
+# ---------------------------------------------------------------------------
+# A11 -- honest-model smoothness at every probed scale. THE BINDING CONSTRAINT.
+#
+# The simulation (sim/, docs/consolidated_draft_v3.pdf S6) showed this precondition
+# is SHARP, not cosmetic: dipping at scales above the honest model's curvature
+# lengthscale produces false positives of 0.33-0.81 on lengthscale-violating GP
+# nulls, versus 0.00-0.04 when the lengthscale exceeds the ladder top.
+#
+# Operational rule: CAP THE LADDER BELOW THE HONEST LENGTHSCALE.
+# Seattle satisfied this with a factor of ~2 to spare (2367 m vs a 1200 m ladder top),
+# which is why the published flag rates calibrate. Re-measure ell before applying the
+# method to a new model/dataset -- and note an auditor with black-box access only
+# cannot run this check directly (see the caveat in results S4b).
+# ---------------------------------------------------------------------------
+a11_smoothness:
+  honest_lengthscale_m: 2367     # measured two ways, results S4b
+  ladder_top_m: 1200             # must stay below honest_lengthscale_m
+  margin_factor: 1.97
+  fp_when_violated: [0.325, 0.808]   # sim/sim1d_robustness_summary.csv
+  fp_when_satisfied: [0.000, 0.042]
+
+# Specificity result from the same sweep: a CONTINUOUS kink (one mechanism, sharp
+# derivative change, no routing) is NOT flagged -- 0.050, exactly nominal. The dip is
+# specific to jumps, a narrower observational-equivalence class than v2 assumed.
+kink_control_flag_rate: 0.050
+
+randomization:
+  unit: tract (permute b across tracts, geometry fixed)
+  radius_matched_m: 800    # from the measured power-vs-distance curve, not tuned to p
+  report: full radius sweep
+
+seeds:
+  main_audit: 777          # scripts/run_seattle_audit.py (single stream)
+  legacy_onmanifold: 555   # + i0, per block
+  legacy_audit_v1: 1234    # + i0, per block
+  sim_suite: 20260729
+  dip_toy: 20260728

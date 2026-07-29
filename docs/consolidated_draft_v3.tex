@@ -1,0 +1,432 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb,mathtools,bm}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{microtype}
+\usepackage[hidelinks]{hyperref}
+
+\definecolor{navy}{RGB}{25,55,92}
+\definecolor{muted}{RGB}{90,96,105}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Prob}{\mathbb{P}}
+\newcommand{\Ind}{\mathbf{1}}
+\newcommand{\Dip}{\operatorname{Dip}}
+\newcommand{\why}[1]{\par\noindent\textcolor{muted}{\small\itshape Why: #1}}
+
+\hypersetup{
+  pdftitle={Auditing Hidden Routing Regimes: Consolidated Method Note (v3)},
+  pdfsubject={Consolidated algorithm note with controlled evaluation},
+}
+
+\title{\textcolor{navy}{Auditing Hidden Routing Regimes in Black-Box Models\\
+\large Consolidated method note (v3): definition, inputs/outputs, assumptions,
+algorithm,\\ and a controlled evaluation with known regimes}}
+\author{Robert Romani}
+\date{July 29, 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This note consolidates the v2 algorithm note (\emph{routing\_audit\_v2}, July 24) and its
+derivation guide into a single description of the \emph{current} method, incorporating the
+experimental findings of July 28 that changed the algorithm substantially: modality (the dip
+test), not dispersion, is the primary detection statistic; the hierarchical GP null generator
+is no longer required; the probe family is decisive rather than a reporting stratification;
+query allocation is a first-class design parameter; and local $K{=}2$ recovery of the routing
+penalty is solved while general-$K$ global synchronization remains open. The note gives, in
+order: the definition of a regime and the recoverable estimand
+(\S\ref{sec:regime}); the method's inputs and outputs (\S\ref{sec:io}); the complete
+assumption set, including two new preconditions surfaced by experiment
+(\S\ref{sec:assumptions}); the complete algorithmic steps (\S\ref{sec:algorithm}); the
+evidence that forced each change from v2 (\S\ref{sec:changes}); a new controlled simulation
+with known true regimes evaluating recovery under a $40\times$ noise sweep and near regime
+boundaries (\S\ref{sec:sim}); and a like-for-like comparison against the previous graph-based
+(SBM) approach and three simple baselines (\S\ref{sec:baselines}). Status and open problems
+close the note (\S\ref{sec:open}).
+\end{abstract}
+
+\section{Setting and the definition of a regime}
+\label{sec:regime}
+
+A deployed black-box system is modeled as
+\[
+  f(x)=f_{g(x)}(x)+\eta,
+\]
+where $g:\mathcal X\to[K]$ is an unobserved routing rule, $f_k$ is the response mechanism of
+branch $k$, and $\eta$ is observation noise. \textbf{A regime is a pair}: a branch $f_k$
+together with the region $g^{-1}(k)$ on which the router selects it. The auditor observes
+only queries and responses through a response map $\psi$; in the present applications the
+response is scalar ($V=1$), which collapses the vector machinery of v2 (whitening is division
+by a scalar; the dip is applied to the responses directly, with no projection choice).
+
+\paragraph{Identifiability ceiling.} Regimes are recoverable only up to behavioural
+equivalence: two branches that answer identically under $\psi$ at the probed inputs are
+indistinguishable in principle, and a sharp-but-continuous transition narrower than the
+probed scales is observationally equivalent to a hard gate. All claims are therefore relative
+to $\psi$, the probe design, and the declared smoothness class. (The controlled evaluation in
+\S\ref{sec:sim} sharpens this: the dip statistic responds to \emph{jumps} and not to
+continuous kinks, so the observational-equivalence class is narrower than v2 assumed.)
+
+\paragraph{The estimand is the boundary, not the partition.} Detection has a radius: a gate
+is visible only from anchors whose probe neighbourhood actually straddles it. The natural
+estimand is therefore the boundary --- the level set where $g$ flips --- together with
+boundary-adjacent territory; per-anchor regime classification is a derived quantity, and
+``unflagged'' is never read as ``interior.'' The corrected ground-truth criterion used
+throughout: an anchor is \emph{detectable} at scale $\sigma$ when the minority probe mass
+across the gate, $\pi_{\mathrm{true}}(\sigma)$, is at least $0.05$; truth is mixing fraction,
+not distance.
+
+\section{Inputs and outputs}
+\label{sec:io}
+
+\paragraph{Inputs.}
+(i) query access to $f$ (no labels, no internals, no gradients);
+(ii) a set of anchors $x_1,\dots,x_n$ (real instances);
+(iii) a probe family and a scale ladder $\sigma_1<\dots<\sigma_T$ --- \emph{on-manifold}
+(kernel-weighted resampling of real inputs) as primary where the covariate distribution is
+locally smooth (assumption A12), ambient Gaussian otherwise or as robustness check;
+(iv) a response map $\psi$;
+(v) a per-anchor query budget $m$ per scale, with the allocation rule of
+\S\ref{sec:algorithm}.
+No protected attribute enters the audit; it is used only in Stage~C scoring.
+
+\paragraph{Outputs.}
+Per anchor: a flag with a $p$-value (dip, Bonferroni over the scales actually dipped); the
+recovered penalty $\widehat\Delta$ (component-mean gap of a $K{=}2$ mixture at the most
+significant scale) with a consistency measure across scales; the soft local composition
+$\widehat\pi$; the anchor orientation $\widehat z$ (which branch owns the unperturbed
+response); and an \emph{abstention} when support or signal is insufficient --- a first-class
+output, distinct from ``null-consistent.''
+Audit level: an alignment claim --- do flags concentrate near candidate gate boundaries? ---
+tested by spatial (or graph) randomization with radius-matched statistics; abstention and
+negative-control rates; and, when per-anchor confirmatory claims are needed,
+Benjamini--Yekutieli across anchors as a dependence-robust sensitivity.
+
+\section{Assumptions}
+\label{sec:assumptions}
+
+B1--B10 carry over from v2 \S8 unchanged in content; stated compactly with diagnostics:
+
+\begin{itemize}[leftmargin=1.8em,itemsep=1pt]
+  \item \textbf{B1 stationarity.} One routing law throughout the audit (no stateful
+  adversary). \emph{Diag:} interleaved disguised queries; batch drift tests.
+  \item \textbf{B2 probe accessibility.} Recovered regimes are those some probe reaches;
+  $\widehat K$ counts observable regimes. \emph{Diag:} cross-support comparison.
+  \item \textbf{B3 local distinguishability.} Locally present regimes differ in response law
+  with bounded local classification error. \emph{Diag:} held-out likelihood, stability.
+  \item \textbf{B4 prevalence.} Minor components need soft mass $m\widehat\pi\ge n_{\min}$
+  ($n_{\min}=20$ here). \emph{Diag:} report soft masses; merge or omit failures.
+  \item \textbf{B5 within-regime continuity.} Branch response laws drift Lipschitz-slowly
+  between neighbouring anchors. \emph{Diag:} centroid smoothness along the anchor graph.
+  \item \textbf{B6 matching margin} and \textbf{B7 overlap connectivity} --- required only
+  for general-$K$ synchronization (open; \S\ref{sec:open}); trivial at $K{=}2$, where
+  components are ordered by mean.
+  \item \textbf{B8 anchor fidelity.} The unperturbed query is routed by the same mechanism
+  (used only for orientation). \emph{Diag:} repeated unperturbed queries.
+  \item \textbf{B9 gate regularity} and \textbf{B10 transversality.} Locally linear boundary
+  at probe scale; probes must have variance along the boundary normal. \emph{Diag:} held-out
+  label prediction; support comparison.
+\end{itemize}
+
+Two preconditions the July experiments added, both \emph{checkable}:
+
+\begin{itemize}[leftmargin=1.8em,itemsep=2pt]
+  \item \textbf{A11 (honest-model smoothness at every probed scale).} The single-branch
+  surface must be effectively straight at all ladder scales: lengthscale $\ell>\sigma_T$ and
+  smooth amplitude far below the gap of interest. Verified for Seattle two independent ways:
+  $\ell\approx 2367$\,m against a ladder top of $1200$\,m, and local curvature amplitude
+  $s\approx 0.004$ log-EUI against a penalty of $0.30$ ($75\times$). The simulation
+  (\S\ref{sec:sim}) shows the condition is \emph{sharp}: GP nulls with $\ell$ above the
+  ladder top flag at $0.00$--$0.04$; with $\ell$ below it, at $0.33$--$0.81$. Operationally:
+  \emph{cap the ladder below the honest lengthscale}, or declare the smoothness class ---
+  this is the surviving content of v2's $\ell_{\min}$ registration, now attached to the dip
+  rather than to a null generator.
+  \item \textbf{A12 (covariate local smoothness, for on-manifold probes).} The probe
+  distribution itself must be locally smooth in the probe metric; otherwise the data's own
+  clustering is read as model multimodality. This is what defeated the attribute-graph
+  experiment (construction-boom years, standard floor counts: dip $p\approx 0$ on the raw
+  covariates). Checkable by dipping the covariates; ambient probes satisfy it by
+  construction, which partially offsets their off-manifold disadvantage. Geography satisfied
+  it by luck, not principle.
+\end{itemize}
+
+\section{The algorithm}
+\label{sec:algorithm}
+
+The simplified pipeline. Stage A$'$ makes the existence and localization claims; Stage B$'$
+recovers local structure at $K{=}2$; Stage C$'$ makes the audit-level claims. The dispersion
+apparatus of v2 \S3.1--3.4 and the hierarchical GP null generator of v2 \S3.3 are \emph{not
+part of the pipeline} (see \S\ref{sec:changes} for the evidence).
+
+\paragraph{Stage A$'$: detection by naive multi-scale dip scan.}
+\begin{enumerate}[label=\textbf{A\arabic*.},leftmargin=2.7em,itemsep=2pt]
+  \item \textbf{Register} the design: $\psi$; probe families; a ladder of $3$--$6$
+  log-spaced scales capped by A11; per-scale budget $m$; $\alpha$; the effect-size
+  threshold; negative controls; support diagnostics.
+  \item \textbf{Probe} each anchor at each scale: on-manifold primary (kernel-weighted
+  resample of real inputs, weights $\propto e^{-d^2/2\sigma^2}$), abstaining at scales with
+  fewer than $12$ distinct neighbours; ambient as robustness family.
+  \item \textbf{Minimum-signal rule, per scale:} dip a scale only if the response variance
+  clears the observation-noise floor ($\chi^2$ test at $5\%$). Scales failing it are
+  abstained from, not counted as evidence of absence. \why{applied per scale, not per
+  anchor; the first Seattle run produced $R^{\log}\approx 18$ purely from an epsilon clamp
+  when this was done per anchor.}
+  \item \textbf{Dip} the (whitened) responses at each surviving scale; \textbf{flag} the
+  anchor if $\min_t p_t < \alpha / \#\{\text{scales dipped}\}$ (Bonferroni across scales).
+  No dispersion curve, no $\sigma^\star$.
+  \item \textbf{Query allocation.} Power is limited by the minor-mode mass $m\,\pi$, not by
+  the test. Prefer fewer scales with larger $m$: on the weak band
+  $\pi_{\mathrm{true}}\in[0.05,0.10]$ at equal budget, $3\times m{=}1000$ gives power
+  $0.875$ versus $0.472$ for $6\times m{=}500$. Design rule: keep $m\pi$ above the dip's
+  power threshold in the weakest band that matters.
+\end{enumerate}
+
+\paragraph{Stage B$'$: local $K{=}2$ recovery.}
+\begin{enumerate}[label=\textbf{B\arabic*.},leftmargin=2.7em,itemsep=2pt]
+  \item \textbf{Fresh draw} per scale (budget split respected: the recovery sample is never
+  the detection sample).
+  \item \textbf{Mixture.} Fit a $2$-component Gaussian mixture; order components by mean;
+  retain soft responsibilities. Report $\widehat\pi$ (mean responsibility), and
+  $\widehat\Delta$ = component-mean gap \emph{at the scale of minimum dip $p$-value} (the
+  across-scale median dilutes $\widehat\Delta$ with non-crossing scales), plus its
+  cross-scale consistency (CV). Apply the minimum-mass rule $m\widehat\pi\ge 20$.
+  \item \textbf{Effect-size filter.} Keep flags with $\widehat\Delta$ above a registered
+  threshold (Seattle: $\widehat\Delta>0.15$ lifted precision $0.968\to 1.000$ at $652$
+  flags). Report as a precision/recall curve, not a single point: $\widehat\Delta$ is biased
+  downward at small $\pi$, so a fixed threshold trades recall in the weak band.
+  \why{$\widehat\Delta$ and the dip read the same bimodality --- this is one test plus a
+  practical-significance filter, not independent corroboration.}
+  \item \textbf{Orientation.} Posterior-assign the unperturbed response to a component;
+  at $K{=}2$ synchronization is ordering by mean. General $K$: open
+  (v2 SYNC1--7 remains the committed procedure; see \S\ref{sec:open}).
+\end{enumerate}
+
+\paragraph{Stage C$'$: audit-level claims.}
+\begin{enumerate}[label=\textbf{C\arabic*.},leftmargin=2.7em,itemsep=2pt]
+  \item \textbf{Alignment by randomization.} Rather than $3{,}581$ dependent per-anchor
+  claims, test what the audit cares about: do flags concentrate near candidate boundaries?
+  Permute the gating covariate across units (tracts), holding geometry and anchors fixed
+  --- valid under arbitrary spatial dependence, no null generator. \textbf{Radius-match} the
+  test statistic to the method's measured reach and report the full radius sweep
+  (Seattle, on-manifold, $\le 800$\,m: $p=0.0025$; a mismatched $\le 100$\,m statistic
+  penalizes the method's own detection radius).
+  \item \textbf{Per-anchor claims} (if needed): BY at $q=0.10$ across anchors as the
+  dependence-robust correction (Seattle flags survive the $c(n)=8.68$ penalty).
+  \item \textbf{Harm read-out} (optional): group-conditional conformal coverage. Seattle:
+  marginal coverage $0.898$ at nominal $90\%$, but $0.840$ on the penalized branch versus
+  $0.903$ off it --- invisible marginally, and the recovered partition is exactly the
+  grouping a Mondrian conformal predictor needs.
+  \item \textbf{Report} existence, structure, interpretation separately, with abstentions,
+  controls, and certified-versus-extrapolated territory as in v2.
+\end{enumerate}
+
+\section{What changed from v2, and the evidence that forced it}
+\label{sec:changes}
+
+\begin{itemize}[leftmargin=1.8em,itemsep=2pt]
+  \item \textbf{Dispersion demoted from primary statistic to (at most) optional
+  corroborator.} It fails all three roles tested: not a detector (uncalibrated $R^{\log}$
+  flags smooth GP nulls at $0.65$--$1.00$; calibrated $T^{\mathrm{scale}}$ reaches power
+  $0.025$ or $0.000$ depending on the null's construction); not a scale selector
+  ($\sigma^\star$ is \emph{worse than a random scale}: power $0.715$ vs $0.798$, because
+  $r(\sigma)$ peaks small while the dip wants balanced mixing); not an efficient screen (AUC
+  $0.750$; retaining $90\%$ of flags still requires dipping $70\%$ of anchors, at
+  $\sim 4\times$ the queries it saves). Its surviving corroboration value (precision
+  $0.52\to 0.81$, $\kappa=0.32$) is dominated by the $\widehat\Delta$ filter.
+  \item \textbf{Modality promoted to primary.} A hard gate seen through a probe of scale
+  $\sigma$ is observationally a transition of width $\approx\sigma$, and a GP with
+  $\ell\approx\sigma$ reproduces the same dispersion curve --- \emph{no statistic computed
+  from $r(\sigma)$ alone can separate them}. What differs is the response
+  \emph{distribution}: a gate makes two clumps separated by the penalty. Seattle: dip flag
+  rate $0.213$ gated vs $0.000$ honest across $3{,}420$ buildings.
+  \item \textbf{Null generator dropped.} It existed to calibrate dispersion; with dispersion
+  gone, the $\ell_{\min}$ registration problem, the contamination/cross-fitting machinery,
+  and the misspecification exposure go with it. The surviving smoothness declaration is A11,
+  attached directly to the ladder.
+  \item \textbf{Probe family is decisive, not a caveat.} The spatial alignment claim is
+  significant on-manifold ($p=0.013$--$0.033$ across all four statistics) and never ambient
+  ($p=0.083$--$0.208$): long-range ambient flags dilute the alignment. On-manifold is
+  primary \emph{where A12 holds} --- the attribute-graph negative result is precisely an A12
+  violation, and ambient probes are the fallback there.
+  \item \textbf{Estimand: boundary-adjacent territory} (detection radius $\approx$ probe
+  reach; \S\ref{sec:sim} table by distance), with per-anchor labels derived.
+  \item \textbf{Query allocation first-class} (A5 above): reallocation lifts projected
+  Seattle power on detectable anchors from $0.737$ to ${\sim}0.94$.
+  \item \textbf{Stage B split.} Local $K{=}2$ recovery with a pure anchor is \emph{solved}
+  (Seattle: $\widehat\Delta=0.291$ against a planted $0.300$; honest-model placebo $0.014$).
+  General-$K$ synchronization, certification, and the recovery theorem remain open.
+\end{itemize}
+
+\section{Controlled evaluation with known regimes}
+\label{sec:sim}
+
+New in this consolidation (code and outputs in \texttt{sim/}; settings registered in file
+headers; seed $20260729$). Two constructions, both with the audit blind to ground truth:
+\textbf{1-D}: $f(x)=\beta x-\Delta\Ind[x\ge 0.5]$, $\beta=0.15$, $\Delta=0.30$, ladder
+$\{0.02,0.063,0.2\}$, $m_{\mathrm{dip}}=m_{\mathrm{rec}}=1000$; matched no-gate control;
+$240$ anchors. \textbf{2-D}: wavy boundary $x_2=0.5+0.08\sin 4\pi x_1$, honest model linear
+plus a long-lengthscale GP term ($\ell=0.5>\sigma_T=0.2$; amplitude $15\times$ below
+$\Delta$), $480$ anchors --- the Seattle geometry class. Both satisfy the measured Seattle
+ordering (A11), and both report the corrected ground truth $\pi_{\mathrm{true}}$.
+
+\paragraph{Noise sweep (Peng's first axis).} $\tau_{\mathrm{obs}}$ swept $0.005\to 0.2$
+($\Delta/\tau$ from $60\times$ to $1.5\times$):
+
+\begin{center}\small
+\begin{tabular}{lcccccc}
+\toprule
+$\tau_{\mathrm{obs}}$ & 0.005 & 0.01 & 0.02 & 0.05 & 0.10 & 0.20\\
+\midrule
+power (detectable anchors)      & 0.976 & 0.964 & 0.892 & 0.567 & 0.012 & 0.000\\
+FP, matched no-gate model       & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.004\\
+abstention, no-gate model       & 0.000 & 0.000 & 0.000 & 0.000 & 0.325 & 0.792\\
+$\widehat\Delta$ at $p_{\min}$ scale (true $0.30$) & 0.248 & 0.248 & 0.248 & 0.252 & 0.288 & ---\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+False positives stay at or below $0.004$ across the entire sweep; when noise drowns the
+signal the method \emph{abstains} rather than flags (the per-scale minimum-signal rule); and
+wherever anything is flagged, the recovered penalty is within $0.05$ of truth with a mild,
+explainable downward bias (the mixture absorbs trend width into the components).
+
+\paragraph{Near regime boundaries (Peng's second axis).} Power against the true mixing
+fraction, the controlled analogue of the Seattle power-vs-$\pi$ curve:
+
+\begin{center}\small
+\begin{tabular}{lcccccc}
+\toprule
+$\pi_{\mathrm{true}}$ & $\le .01$ & $.01\!-\!.05$ & $.05\!-\!.10$ & $.10\!-\!.20$ & $.20\!-\!.35$ & $.35\!-\!.50$\\
+\midrule
+flag rate, 1-D & 0.00 & 0.00 & 0.55 & 1.00 & 1.00 & 1.00\\
+flag rate, 2-D & 0.00 & 0.00 & 0.71 & 1.00 & 1.00 & 1.00\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Detection is binary in $\pi$: perfect above $0.10$, impossible below $0.05$ ($m\pi<50$
+minor-mode points), partial in between --- confirming that power is limited by minor-mode
+mass, not by the test, and motivating the allocation rule. By distance (2-D): flag rate
+$1.00$ out to the ladder top, $0.73$ at $1$--$1.5\times$, $0.015$ beyond --- the detection
+radius \emph{is} probe reach. Orientation accuracy on flagged anchors: $0.956$; overall 2-D:
+power $0.929$, FP $0.000$, $\widehat\Delta$ median $0.270$ ($0.297$ within $0.02$ of the
+boundary).
+
+\paragraph{Robustness, and a sharp new precondition (A11).} Smooth GP confounders and a
+kink control at $\tau=0.02$:
+
+\begin{center}\small
+\begin{tabular}{lccc}
+\toprule
+null model & $\ell$ vs ladder top & FP rate & reading\\
+\midrule
+GP $A{=}.10,\ \ell{=}.30$ & above & 0.000 & precondition holds\\
+GP $A{=}.20,\ \ell{=}.30$ & above & 0.042 & precondition holds\\
+GP $A{=}.10,\ \ell{=}.10$ & straddles & 0.375 & marginal\\
+GP $A{=}.10,\ \ell{=}.05$ & below & 0.325 & violated --- designed failure\\
+GP $A{=}.20,\ \ell{=}.05$ & below & 0.808 & violated --- designed failure\\
+kink (continuous, unrouted) & --- & 0.050 & \emph{not} flagged; dip targets jumps\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Dipping at scales beyond the honest lengthscale reads smooth wiggles as modes; capping the
+ladder (checkable; Seattle had a factor of two to spare) restores nominal error. The kink
+control refines v2's observational-equivalence discussion: the dip does \emph{not} flag
+sharp-but-continuous behaviour at nominal rates --- modality is specific to jumps, a
+specificity dispersion never had.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{fig_sim_known_regimes.png}
+\caption{Known-regimes simulation. Left to right: noise sweep (power, FP, abstention);
+power against true mixing fraction near the boundary (1-D and 2-D); penalty recovery
+against noise with the honest-model placebo; the A11 precondition is sharp and checkable.}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.9\textwidth]{fig_sim2d_map.png}
+\caption{2-D spatial gate: flags trace the wavy boundary (left); recovered
+$\widehat\Delta$ per flagged anchor against a planted $0.30$ (right).}
+\end{figure}
+
+\section{Comparison with the graph-based approach and simple baselines}
+\label{sec:baselines}
+
+All methods run on the same 2-D gated/honest pair. The SBM row runs the April
+behavioural-fingerprint thread's own code (\texttt{geospatial-xai-attacks/src/sbm}: kNN
+cosine graph over per-anchor response fingerprints, collapsed-Gibbs Bernoulli SBM, $K{=}2$,
+modal partition).
+
+\begin{center}\small
+\begin{tabular}{lccccc}
+\toprule
+method & existence FP & partition acc. & partition acc. & $\widehat\Delta$ err & queries\\
+       & (honest)     & (all anchors)  & (detectable)   &                      & /anchor\\
+\midrule
+dip-scan (ours)        & 0.000 & \textbf{0.80} & \textbf{0.93} & \textbf{0.03} & 6001\\
+global cluster + BIC   & 0.00  & 0.54 & 0.54 & 0.30 & 25\\
+residual outlier       & 0.008 & 0.52 & 0.52 & --- & 25\\
+SPA profile-mean       & \emph{no test} & 0.52 & 0.58 & 0.21 & 50\\
+plain SBM, $K{=}2$ (their code) & \emph{no test} & 0.61 & --- & --- & 33\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Readings. \textbf{Global clustering} answers \emph{existence} in this easy setting (BIC
+picks $K{=}2$ gated, $K{=}1$ honest) but its partition is chance-level: the detrending fit
+absorbs most of the gate, and the residual split follows covariates rather than mechanism ---
+the failure v2 \S5 predicted. \textbf{Residual outliers} see almost nothing (the smooth fit
+absorbs the level shift). \textbf{SPA} has no calibrated existence claim and near-chance
+partition; its vertex gap over-estimates from noise extremes ($\widehat\Delta$ error $0.21$)
+--- averaging destroys the modality evidence, which was the original reason for abandoning
+the route. \textbf{The SBM} aligns only weakly with the true regime (ARI $0.048$ gated,
+$0.000$ honest) and returns a partition unconditionally: behavioural-fingerprint similarity
+cancels the constant penalty (a level effect) except across boundaries, so the block
+structure has little to latch onto --- intrinsic to similarity-graph methods, not a tuning
+failure. Ours is the only method with a calibrated per-anchor existence claim, boundary
+localization, and penalty recovery; its cost, $\sim 200\times$ the query budget of the cheap
+baselines, is the price of those guarantees and is the axis the allocation rule optimizes.
+
+\section{Status and open problems}
+\label{sec:open}
+
+\textbf{Demonstrated} (Seattle, $n=3{,}581$, planted gate $0.30$ on tract share, and the
+controlled suite above): existence with $0.0075$ honest flag rate and power $0.737$
+($\to\sim 0.94$ reallocated); precision $1.000$ at the registered operating point
+($\widehat\Delta>0.15$, $652$ flags); recovery $\widehat\Delta=0.291$
+(IQR $[0.152,0.299]$) vs placebo $0.014$; alignment $p=0.0025$ radius-matched;
+conditional-coverage harm invisible to a marginal conformal check.
+
+\textbf{Open, in rough order of value:}
+\begin{enumerate}[leftmargin=2.2em,itemsep=1pt]
+  \item \emph{General-$K$ synchronization and certification} (v2 SYNC1--7, CERT1--4) with
+  the theorem-shaped target of v2 \S13: forest propagation correct with probability
+  $\ge 1-\sum_e\alpha_e$ under B3--B7; unblocked but unstarted.
+  \item \emph{Generalization beyond geospatial}: the anchor graph need not be geographic
+  (v2 SYNC1), but A12 must hold in the probe metric. Routes: discrete graphs (feeder, rate
+  class, tariff), proper residualization (the null generator's job resurfacing in a smaller
+  role --- current partial fix reduces honest FP $0.27\to 0.10$, still $2\times$ nominal),
+  or a smoother dataset.
+  \item \emph{$\widehat\Delta$ at small $\pi$}: downward bias ($0.158$ on the Seattle weak
+  band); report filter as precision/recall curve; pooling across the anchor graph is the
+  likely fix and is the same machinery as (1).
+  \item \emph{Adaptive adversaries} (response smoothing near probe scales) --- scoped in v2,
+  untouched.
+\end{enumerate}
+
+\paragraph{Reproducibility.} The simulation suite is self-contained (numpy/pandas/
+matplotlib; optional scipy/diptest/sklearn), seeded, and resumable; the Seattle pipeline's
+reorganization into \texttt{geospatial-xai-attacks} with configs and a single
+\texttt{run\_all} entry point accompanies this note.
+
+\end{document}

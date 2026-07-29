@@ -7,6 +7,7 @@ seed: 777
 
 audit:
   scale_min_m: 25.0
+  # A11: must stay below the honest lengthscale (2367 m) -- see registered_settings.yaml
   scale_max_m: 1200.0
   n_scales: 3
   m_dip: 1000

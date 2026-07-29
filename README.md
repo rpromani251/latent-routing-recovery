@@ -48,14 +48,42 @@ implementation; the SBM/pEx thread and the original Phase 1–2 fooling-XAI work
 
 ## Entry points
 
-- **Results (start here):** [`docs/results_2026-07-28.md`](docs/results_2026-07-28.md) —
-  every empirical claim behind the design choices below, with numbers.
+- **Method note (start here):**
+  [`docs/consolidated_draft_v3.pdf`](docs/consolidated_draft_v3.pdf) — the current method
+  in one 8-page document: regime definition and identifiability ceiling, inputs/outputs,
+  the full assumption set, algorithmic steps, what changed from v2 and why, the
+  controlled simulation, and the baseline comparison.
+- **Results log:** [`docs/results_2026-07-28.md`](docs/results_2026-07-28.md) — every
+  empirical claim behind the design choices below, with numbers.
+- **Current status and open problems:**
+  [`docs/status_2026-07-29.md`](docs/status_2026-07-29.md).
+- **Simulation + baselines:** [`sim/README_SIM.md`](sim/README_SIM.md).
+- **Registered settings (incl. the A11 constraint):**
+  [`configs/registered_settings.yaml`](configs/registered_settings.yaml).
 - **Method derivation:** [`docs/derivation_guide.md`](docs/derivation_guide.md) (the why)
   and [`docs/routing_audit_v2.pdf`](docs/routing_audit_v2.pdf) (the algorithm note this
   repo's findings revise).
 - **Data setup:** [`docs/data_dependencies.md`](docs/data_dependencies.md).
 - **What moved to `legacy/` and why:**
   [`src/detect_recover_interpret/legacy/README.md`](src/detect_recover_interpret/legacy/README.md).
+
+## A11 — the binding precondition
+
+The method assumes the honest model is smooth at **every probed scale**. The controlled
+simulation showed this is sharp rather than cosmetic: dipping at scales above the honest
+model's curvature lengthscale drives the false-positive rate to **0.33–0.81**, while
+capping the ladder below it restores nominal error (**0.00–0.04**). Seattle satisfied the
+condition with a factor of ~2 to spare (ℓ ≈ 2367 m vs a 1200 m ladder top), which is why
+the published rates calibrate.
+
+**Operational rule: cap the probe ladder below the honest model's lengthscale, and
+re-measure ℓ before applying the method to a new model or dataset.** Note that an auditor
+with black-box access alone cannot run this check directly — see the caveat in
+`docs/results_2026-07-28.md` §4b.
+
+Related specificity result from the same sweep: a *continuous* kink (one mechanism, sharp
+derivative change, no routing) is **not** flagged — 0.050, exactly nominal. The dip is
+specific to jumps, a narrower observational-equivalence class than v2 assumed.
 
 ## The current method, in one pass
 
@@ -91,8 +119,45 @@ figure set: `fig_poster_1_mechanism.png`, `fig_poster_2_map.png`,
 `scripts/experiments/` and aren't run by `run_all.sh` by default — see the docstring in
 each for usage.
 
+## Controlled evaluation with known regimes
+
+`sim/` builds 1-D and 2-D routing models whose regimes are known by construction, and
+runs the same audit against them. Self-contained (no Seattle data, falls back to a
+Monte-Carlo dip calibration if `diptest` is absent), seeded, and resumable.
+
+| axis | finding |
+|---|---|
+| noise (τ_obs 0.005→0.2, Δ/τ 60×→1.5×) | power 0.98 → 0.89 → 0.57 → ~0; FP ≤ 0.004 throughout; the method **abstains** (0.79) rather than false-flags at extreme noise; Δ̂ holds 0.25–0.29 vs true 0.30 wherever flags exist |
+| distance to boundary | power is effectively binary in the true mixing fraction: 1.00 above π≈0.10, 0.55–0.71 in 0.05–0.10, 0 below — minor-mode mass m·π is the binding constraint, reproducing the Seattle result in a controlled setting |
+| smoothness (A11) | see above — the precondition is sharp and checkable |
+
+Baseline comparison on the same 2-D construction (`sim/baseline_comparison.csv`), with
+the graph-based approach run using the **actual SBM code** from `geospatial-xai-attacks`:
+
+| method | existence test | partition acc (all / detectable) | Δ̂ err | queries/anchor |
+|---|---|---|---|---|
+| dip-scan (ours) | yes, calibrated | 0.80 / **0.93** | 0.03 | 6001 |
+| global cluster + BIC | yes | 0.54 / 0.54 | 0.30 | 25 |
+| residual outlier | yes | 0.51 / 0.52 | — | 25 |
+| SPA profile-mean | none | 0.52 / 0.58 | 0.21 | 50 |
+| plain SBM K=2 (their code) | none | 0.61 / — | — | 33 |
+
+Global clustering does answer existence here (BIC picks K=2 gated, K=1 honest) but
+partitions at chance. The SBM aligns only weakly (ARI 0.048) because fingerprint
+similarity cancels level effects except across boundaries — intrinsic to the encoder,
+not a tuning failure.
+
+```bash
+cd sim && python3 run_cells.py        # 1-D suite (parallel, resumable)
+python3 sim2d_known_regimes.py        # 2-D
+python3 sim_baselines.py              # simple baselines
+python3 sim_sbm_baseline.py           # SBM (needs the sibling repo; DRI_GEOXAI_REPO)
+python3 fig_sim_results.py            # figures
+```
+
 ## Layout
 
+- `sim/` — controlled known-regimes simulation, baselines, and the SBM comparison.
 - `src/detect_recover_interpret/` — library code: honest model + gate (`model.py`), probe families
   (`probes.py`), the production audit protocol (`audit.py`), dispersion-curve utilities
   kept for validation/corroboration (`dispersion.py`), spatial-randomization utilities

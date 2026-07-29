@@ -1,0 +1,2 @@
+n_gated,n_honest,n_detectable,power,fp_honest,fp_no_crossing,abstain_gated,abstain_honest,delta_med,delta_q25,delta_q75,delta_pmin_med,delta_pmin_q25,delta_pmin_q75,delta_honest
+480,480,339,0.9292035398230089,0.0,0.0,0.0,0.0,0.2701410683682836,0.14581111647796324,0.28126978282242,0.2696373421536283,0.2665770815379557,0.28857343432788873,0.018013962215153598

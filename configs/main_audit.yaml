@@ -5,6 +5,9 @@ seed: 777
 
 audit:
   scale_min_m: 25.0
+  # A11: scale_max_m MUST stay below the honest model's curvature lengthscale
+  # (2367 m here -- see configs/registered_settings.yaml). Exceeding it inflates the
+  # false-positive rate to 0.33-0.81; this is a sharp precondition, not a guideline.
   scale_max_m: 1200.0
   n_scales: 6
   m_dip: 500
