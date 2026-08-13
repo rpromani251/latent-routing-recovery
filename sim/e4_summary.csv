@@ -1,0 +1,7 @@
+manifold,method,fp_honest,abstain,power_detectable
+clumpy,raw,0.49230769230769234,0.0,0.8636363636363636
+clumpy,resid,0.0,0.0,0.15555555555555556
+clumpy,resid_rob,0.0,0.0,0.5681818181818182
+uniform,raw,0.0,0.0,0.14130434782608695
+uniform,resid,0.0,0.0,0.043010752688172046
+uniform,resid_rob,0.0,0.0,0.9010989010989011

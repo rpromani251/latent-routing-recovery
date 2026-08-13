@@ -88,3 +88,21 @@ boundaries; this is intrinsic to similarity-graph methods, not a tuning issue.
 
 Dependencies: numpy, pandas, matplotlib. Optional: scipy, diptest, and
 scikit-learn + the repo for the SBM baseline.
+
+## Extension experiments (E1–E4, July 29)
+
+Future-work items run as controlled experiments with pre-stated propositions;
+full write-up in `future_work_experiment.pdf` (vault root and
+`docs/routing_audit/` in the repo). Files: `ext_core.py`, `ext1_fullvec.py`
+(full input-vector probing), `ext2_kgt2.py` (K>2), `ext3_vector_output.py`
+(non-scalar outputs), `ext4_nongeo.py` (clumpy manifolds / A12), driver
+`run_ext.py`, figure `fig_future_work.png`.
+
+Headlines: crossing-rate law Φ(−d√D/σ) verified to 3 decimals; plain OLS
+residualization absorbs ~64% of the gap (closed form) — trimmed residualization
+repairs it and makes full-vector probing D-independent (0.74 at D=16), fixes
+clumpy-manifold FP 0.49→0.00 (power 0.57), and unmasks strong trends
+(0.14→0.90); BIC + effect-size merge rule recovers K̂ at 0.75 with 99.7%
+global label matching; vector outputs need any projection with weight
+orthogonal to the within-branch variation, and intercept-at-anchor recovery
+returns the penalty vector at cos 1.000.

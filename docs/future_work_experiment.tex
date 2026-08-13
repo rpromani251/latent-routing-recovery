@@ -1,0 +1,276 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{microtype}
+\usepackage[hidelinks]{hyperref}
+
+\definecolor{navy}{RGB}{25,55,92}
+\definecolor{ok}{RGB}{46,125,50}
+\definecolor{bad}{RGB}{196,78,82}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Ind}{\mathbf{1}}
+\newcommand{\confirmed}{\textcolor{ok}{\textbf{Confirmed.}}}
+\newcommand{\refuted}{\textcolor{bad}{\textbf{Refuted.}}}
+\newcommand{\refined}{\textcolor{navy}{\textbf{Refined.}}}
+
+\title{\textcolor{navy}{Future-Work Items as Controlled Experiments\\
+\large Propositions, tests, and verdicts for four extensions of the routing audit}}
+\author{Prepared for review --- routing-audit thread}
+\date{July 29, 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+The poster's future-work section lists five limitations of the current audit: recovery of the
+full partition rather than the boundary (needs certification); probes that perturb the full
+input vector rather than location only; $K>2$ regimes; non-scalar outputs; and
+non-geographic anchor graphs. This note takes the four that admit controlled study now,
+states a falsifiable proposition for each \emph{before} running anything, tests it on
+synthetic models with known ground truth, and records the verdict --- including two
+propositions that were partly wrong, why, and what repairs them. One operator recurs across
+three of the four studies: \emph{trimmed local-linear residualization} of responses on the
+probe displacement. Plain OLS residualization destroys the signal it is meant to expose
+(it absorbs $\approx 64\%$ of the gap at balanced mixing; closed form below); the trimmed
+variant keeps the fitted plane on the majority branch and (i) makes full-vector probing
+dimension-independent (E1), (ii) restores validity on clumpy covariate manifolds where the
+raw dip false-positives at $0.49$ (E4), and (iii) even raises power on well-behaved
+manifolds when the smooth trend is strong ($0.14 \to 0.90$). All experiments are seeded and
+reproducible (\texttt{sim/ext*.py}); the certification item is discussed but not tested, as
+it requires the Stage-B machinery that remains open.
+\end{abstract}
+
+\section{Setup common to all experiments}
+
+Protocol as in the consolidated note: naive scan over 3 scales, Hartigan dip per test with
+Bonferroni over the tests actually made, per-scale minimum-signal abstention, $m{=}1000$
+queries per test, $\alpha=0.05$, gate penalty $\Delta=0.30$, observation noise
+$\tau=0.02$, seeds fixed per cell. Every gated model has a matched no-gate control; power is
+reported on anchors whose probes actually reach a boundary ($\pi_{\mathrm{true}}\ge 0.05$)
+and false positives on the matched control. ``Detectable'' and $\pi_{\mathrm{true}}$ follow
+the corrected (mixing-fraction) ground truth.
+
+\section{E1 --- Perturbing the full input vector}
+
+\paragraph{Proposition P1.} Gate on coordinate 1 at distance $d$; honest slopes $\beta$ on
+every coordinate; dimension $D$.
+(a) An isotropic probe with \emph{fixed total budget} (per-coordinate sd $\sigma/\sqrt D$)
+crosses with rate $\Phi(-d\sqrt D/\sigma)$: detectability collapses in $D$.
+(b) With \emph{fixed per-coordinate} scale $\sigma$, crossing is $D$-independent but
+within-branch response spread grows as $\sigma\beta\sqrt{D-1}$, masking the gap.
+(c) OLS residualization of $y$ on the displacement removes the off-axis spread and recovers
+most of (b)'s loss.
+(d) Coordinate-targeted scanning restores 1-D power at $D\times$ cost.
+
+\paragraph{Design.} $D\in\{2,4,8,16\}$, 100 anchors spanning the boundary band, five probe
+strategies, gated + control ($16{,}000$ audits).
+
+\paragraph{Results.}
+\begin{center}\small
+\begin{tabular}{lcccccc}
+\toprule
+power & $D{=}2$ & $D{=}4$ & $D{=}8$ & $D{=}16$ & FP & queries\\
+\midrule
+isotropic, fixed total   & 1.00 & 0.95 & 0.83$^\ast$ & 0.86$^\ast$ & 0.00 & 3000\\
+isotropic, per-coord     & 1.00 & 0.98 & 0.80 & 0.55 & 0.00 & 3000\\
+\ + OLS residualization  & 0.03 & 0.05 & 0.01 & 0.02 & 0.00 & 3000\\
+\ + trimmed residualization & 0.76 & 0.75 & 0.74 & 0.74 & 0.00 & 3000\\
+coordinate scan          & 1.00 & 1.00 & 1.00 & 1.00 & 0.00 & $3000D$\\
+\bottomrule
+\end{tabular}
+\end{center}
+{\small $^\ast$conditional on detectability, which itself collapses: detectable anchors
+fall $100\to 78\to 56$ at $D=8,16$ --- the loss appears as vanishing $\pi$, exactly as
+P1(a) predicts. Empirical median $\pi_{\mathrm{true}}$ matches $\Phi(-d\sqrt D/\sigma)$ to
+three decimals at every $D$ (e.g.\ $D{=}16$: $0.063$ vs.\ $0.067$).}
+
+\paragraph{Verdict.} (a), (b), (d): \confirmed{} (a) is quantitative, not just directional.
+(c): \refuted{} --- and the failure is instructive. The step is strongly correlated with
+$\delta_1$, so the OLS plane absorbs most of it: with $z=\delta_1/\sigma$ and a boundary
+through the anchor, the residual between-branch separation is
+\[
+  \Delta\left(1-\varphi(0)\,\bigl(\E[z\,|\,z{>}0]-\E[z\,|\,z{<}0]\bigr)\right)
+  = \Delta\bigl(1-2\varphi(0)\sqrt{2/\pi}\,\bigr)\approx 0.36\,\Delta,
+\]
+while the tilted fit adds within-branch spread $\approx 0.24\,\Delta$: separation
+$\sim 1.5$ component-sds, and the dip goes blind. The repair --- P1(c$'$), added after the
+falsification and then tested --- is \emph{trimmed} residualization (fit, drop the top 25\%
+of $|$residual$|$, refit, residualize all): the plane stays on the majority branch, the
+minority jump survives at full size, and power is restored to $0.74$--$0.76$
+\emph{independent of $D$}. At $D{=}16$ this beats the raw probe (0.55) at equal query cost.
+The practical ordering at fixed budget: coordinate scan when $D\times$ queries are
+affordable; trimmed residualization otherwise.
+
+\section{E2 --- $K>2$ regimes}
+
+\paragraph{Proposition P2.} Three regimes,
+$f(x)=\beta x-0.25\,\Ind[x\ge\tfrac13]-0.50\,\Ind[x\ge\tfrac23]$
+(levels $0,-0.25,-0.75$). (a) BIC-selected mixtures at the most significant scale recover
+the number of regimes the probe overlaps; (b) adjacent-gap estimates are consistent where
+the probe resolves them; (c) in the scalar case, local-to-global label matching reduces to
+clustering trend-adjusted component levels (a mini-synchronization requiring no assignment
+machinery), because within-regime drift over a probe width is small against the gaps.
+
+\paragraph{Results.} 150 anchors; scales $\{0.02,0.09,0.40\}$, the top one spanning both
+boundaries from mid-domain.
+\begin{itemize}[leftmargin=1.8em,itemsep=1pt]
+  \item[(a)] \refined{} Raw BIC \emph{over}-partitions: accuracy $0.64$, with
+  $k_{\mathrm{true}}{=}3\to\widehat K{=}4$ dominant --- trend smear inside each branch is
+  non-Gaussian and BIC pays for it with extra components. Applying the audit's own
+  registered effect-size floor as a \emph{merge rule} (components closer than $0.15$ are
+  one regime) lifts accuracy to $0.75$ and flips the error direction to mild
+  under-counting --- the conservative direction for an audit claim.
+  \item[(b)] \confirmed{} at boundary-local scales: median gap $0.228$ at the $0.25$
+  boundary, $0.477$ at the $0.50$ boundary. At the wide scale the three-mode fits recover
+  the total span ($0.61$ vs.\ $0.75$) but attribute it poorly across the two gaps.
+  Design lesson: \emph{$K$-counting and gap estimation want different scales} --- count
+  wide, estimate narrow.
+  \item[(c)] \confirmed{}, with one repair: per-anchor slope estimates absorb the step near
+  boundaries (the E1 mechanism again), so the trend adjustment must use the \emph{global
+  median} slope ($\widehat\beta=0.134$, true $0.15$). Then clustering the adjusted levels
+  labels components at \textbf{0.997} accuracy ($n=330$ components), despite the cluster
+  centers themselves being biased ($0/-0.19/-0.64$ vs.\ $0/-0.25/-0.75$): matching is much
+  easier than estimation, which is exactly why the scalar case avoids SYNC1--7.
+\end{itemize}
+
+\section{E3 --- Non-scalar outputs}
+
+\paragraph{Proposition P3.} Responses in $\R^V$ ($V{=}3$), within-branch variation along a
+direction $u$ (slope $\beta{=}3$), penalty $\Delta v$ with
+$\theta=\angle(u,v)$. (a) The dip on PC1 fails as $\theta\to 90^\circ$ (PC1 locks to $u$);
+(b) top-2 PCs with Bonferroni restore power when variation is rank $\le 2$; (c) output axes
+work only if $v$ is axis-aligned, random projections pay $\sim 1/\sqrt V$; (d)
+responsibilities from the best projection transfer to $\R^V$ and the component-conditional
+mean difference recovers the penalty \emph{vector}.
+
+\paragraph{Results (power at $V{=}3$; FP $=0.00$ throughout).}
+\begin{center}\small
+\begin{tabular}{lcccc}
+\toprule
+$\theta$ & $0^\circ$ & $30^\circ$ & $60^\circ$ & $90^\circ$\\
+\midrule
+PC1 only            & 0.00 & 0.00 & 0.62 & 1.00\\
+top-2 PCs (Bonf.)   & 0.00 & 1.00 & 0.67 & 1.00\\
+output axes (Bonf.) & 0.00 & 1.00 & 1.00 & 1.00\\
+8 random proj.      & 0.00 & 0.97 & 1.00 & 1.00\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\paragraph{Verdict.} \refined{} --- the geometry is different, and cleaner, than P3(a)
+assumed. What matters is the decomposition of the penalty into components \emph{parallel}
+and \emph{orthogonal} to the within-branch variation. The parallel component hides inside
+the trend (the scalar trend-masking phenomenon); the orthogonal component is nearly
+noise-free. Hence: at $\theta=0$ \emph{nothing} detects --- a genuine identifiability
+limit, not a projection failure; at intermediate angles PC1 fails ($0.00$ at $30^\circ$)
+because it sees only the masked parallel part, while any projection with weight on the
+orthogonal component succeeds; and at $\theta=90^\circ$ PC1 \emph{succeeds}, contrary to
+P3(a), because the scale ladder immunizes it: within-branch variance shrinks like
+$(\beta\sigma)^2$ as $\sigma$ decreases while the gap stays $\Delta$, so at the smallest
+scale the between-branch direction dominates and PC1 rotates onto $v$. P3(b) holds with a
+caveat (at $60^\circ$ PC2 catches only $\Delta\sin\theta$); axes and random projections
+were the most robust overall here. (d) \confirmed{} after one correction with the same
+flavor as E1's: the raw group-mean difference is contaminated by the trend times the
+difference in where the groups sit ($\|\widehat\Delta\|=0.57$, cosine $0.52$); defining
+the estimand as the difference of \emph{group-conditional local-linear predictions at the
+anchor} recovers $\|\widehat\Delta\|=0.297$--$0.301$ with cosine $1.000$ to $v$, at
+$V{=}3$ and $V{=}8$. The open item is estimated (non-isotropic) whitening.
+
+\section{E4 --- Non-geographic anchor graphs (clumpy covariates)}
+
+\paragraph{Proposition P4.} Covariates drawn from a 6-cluster mixture (the
+attribute-space analogue of construction booms and standard floor counts), strong smooth
+attribute trend, A11 satisfied. (a) On-manifold probes at scales comparable to the
+inter-cluster spacing inherit the data's multimodality: the honest model is flagged far
+above nominal (the A12 violation, reproduced in vitro). (b) Local-linear residualization
+restores near-nominal validity while the jump retains power. (c) On a uniform manifold the
+raw dip is already valid: the failure belongs to the data distribution, not to on-manifold
+probing.
+
+\paragraph{Results (130 anchors per cell; power on detectable anchors).}
+\begin{center}\small
+\begin{tabular}{llcc}
+\toprule
+manifold & method & FP (honest) & power\\
+\midrule
+clumpy  & raw                 & \textbf{0.49} & 0.86\\
+clumpy  & OLS residualization & 0.00 & 0.16\\
+clumpy  & trimmed residualization & 0.00 & \textbf{0.57}\\
+uniform & raw                 & 0.00 & 0.14$^\dagger$\\
+uniform & trimmed residualization & 0.00 & \textbf{0.90}\\
+\bottomrule
+\end{tabular}
+\end{center}
+{\small $^\dagger$the strong attribute trend masks the gap at large scales even on a
+uniform manifold --- the scalar trend-masking limit, not an A12 effect.}
+
+\paragraph{Verdict.} (a), (c): \confirmed{} --- FP $0.49$ vs.\ $0.00$ on the same model
+with the same probes, differing only in the data distribution. (b): \refined{} --- plain
+OLS residualization does fix validity but pays the E1 gap-absorption cost (power $0.16$);
+the trimmed variant keeps validity at FP $0.00$ \emph{and} power $0.57$. The unexpected
+result is the uniform row: trimmed residualization raises power $0.14\to 0.90$ by removing
+the trend that was masking the gap. This converts the ``trend width vs.\ gap'' power limit
+into a ``residual width vs.\ gap'' limit --- a strictly better trade wherever the honest
+surface is locally linear (A11).
+
+\section{Cross-cutting conclusions}
+
+\begin{enumerate}[leftmargin=2.2em,itemsep=2pt]
+  \item \textbf{Trimmed local-linear residualization should likely become a standard
+  pipeline stage.} It appears independently as the repair in E1 (dimension-independence),
+  E4 (A12 validity), and E4-uniform (trend unmasking), and its failure mode is now
+  understood in closed form (plain OLS absorbs $1-2\varphi(0)\sqrt{2/\pi}\approx 64\%$ of
+  the gap at balanced mixing). Open: behaviour under curved honest surfaces near the A11
+  margin, and at mixing fractions near $0.5$ where trimming is ambiguous.
+  \item \textbf{The registered effect-size floor does double duty} as a component-merge
+  rule for $K$ selection, shifting BIC's over-partitioning to conservative
+  under-counting (E2).
+  \item \textbf{Scale ladders have two distinct jobs} --- count regimes wide, estimate gaps
+  narrow (E2); and the small end of the ladder is what immunizes PC1 against alignment
+  failure (E3).
+  \item \textbf{Two genuine identifiability limits surfaced}: a penalty parallel to strong
+  within-branch variation is invisible to any projection at any angle (E3, $\theta=0$);
+  and fixed-total-budget probing in high dimension destroys detectability itself, not just
+  power (E1(a), with the crossing-rate formula verified to three decimals).
+  \item \textbf{Recovery estimands must be group-conditional predictions at the anchor}
+  (E3(d), and implicitly the scalar $\widehat\Delta$): raw component-mean differences mix
+  the penalty with the trend across the two groups' supports.
+\end{enumerate}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth]{fig_future_work.png}
+\caption{E1--E4 headline results. E1: power vs.\ dimension by probe strategy; E2: $\widehat K$
+accuracy before/after the merge rule; E3: power vs.\ penalty angle by projection strategy;
+E4: honest-model FP and gated-model power on clumpy vs.\ uniform manifolds.}
+\end{figure}
+
+\section{Not tested here}
+
+\textbf{Full partition via certification} (poster item 1) is not a simulation-sized
+question: it needs bridge-probe certification (CERT1--4), the abstention bookkeeping, and
+ideally the general-$K$ synchronization layer, i.e.\ the Stage-B machinery that the
+consolidated note lists as the largest open item. The E2 result narrows it slightly: in the
+scalar case, global labels come from level clustering at $0.997$ accuracy, so the
+certification problem reduces to marking \emph{territory} (where between-anchor edges are
+supported by probes), not to label agreement.
+
+\section{Reproducibility}
+
+Code: \texttt{sim/ext\_core.py}, \texttt{sim/ext1\_fullvec.py} \ldots
+\texttt{sim/ext4\_nongeo.py}, driver \texttt{sim/run\_ext.py}; seeded, resumable,
+per-cell CSVs; summaries via \texttt{summarize}. Anchor-level outputs:
+\texttt{e1\_anchors.csv} \ldots \texttt{e4\_anchors.csv}; summaries:
+\texttt{e1\_summary.csv}, \texttt{e2\_confusion*.csv}, \texttt{e2\_levels.csv},
+\texttt{e3\_summary.csv}, \texttt{e4\_summary.csv}. Dependencies: numpy, pandas,
+matplotlib (diptest optional; the Monte-Carlo dip fallback is seeded).
+
+\end{document}

@@ -67,6 +67,32 @@ implementation; the SBM/pEx thread and the original Phase 1–2 fooling-XAI work
 - **What moved to `legacy/` and why:**
   [`src/detect_recover_interpret/legacy/README.md`](src/detect_recover_interpret/legacy/README.md).
 
+### Since the method note (29 July onward)
+
+`consolidated_draft_v3` describes the method as of 29 July. Three later documents revise
+it and are not yet reflected in the code:
+
+- **Probe geometry and scale selection:**
+  [`docs/routing_audit_probe_geometry_consolidated.md`](docs/routing_audit_probe_geometry_consolidated.md)
+  — the E1–E4 findings, the trimming operator in closed form, tangent-frame on-manifold
+  probing, GRIDE-based scale selection, and the dip-vs-mixture-LRT choice. Every claim
+  carries a provenance tag (`[VALIDATED]` / `[DERIVED]` / `[PROPOSED]` / `[LIMIT]`).
+- **Stage 0/1 specification:** [`docs/probe_policy_spec.md`](docs/probe_policy_spec.md) —
+  the geometry-driven probe policy the above implies, with its abstention taxonomy.
+- **Detection-phase review (most recent, 31 July):**
+  [`docs/dri_detection_phase_working_doc.md`](docs/dri_detection_phase_working_doc.md) —
+  falsifies the plateau-equals-A11 equivalence, identifies the resonance band (honest FP
+  0.136–0.169 at ~1 oscillation per probe ball), rejects the quadratic lack-of-fit repair
+  as uncalibratable, adopts Δ-invariance over a 3-rung ladder, and specifies Experiments
+  A, P and S.
+- **Future-work experiments (E1–E4):**
+  [`docs/future_work_experiment.pdf`](docs/future_work_experiment.pdf); code in
+  `sim/ext*.py`, driver `sim/run_ext.py`.
+
+> **Implementation gap.** Nothing in `src/` implements Stage 0 (GRIDE, plateau detection,
+> tangent frame, density filter) or the equal-variance mixture LRT. The numbers in the
+> detection-phase review come from a separate reimplementation that was not preserved.
+
 ## A11 — the binding precondition
 
 The method assumes the honest model is smooth at **every probed scale**. The controlled
@@ -170,4 +196,5 @@ python3 fig_sim_results.py            # figures
   counts, τ_obs, penalty, threshold, seed).
 - `data/` — raw + processed (git-ignored, see `docs/data_dependencies.md`).
 - `results/` — audit CSVs and figures (git-ignored).
-- `docs/` — results, derivation, data setup.
+- `docs/` — method notes (current and superseded), results log, probe-policy spec,
+  detection-phase review, data setup.
