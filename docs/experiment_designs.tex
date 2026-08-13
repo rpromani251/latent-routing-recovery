@@ -439,12 +439,107 @@ P-4 & Orientation error scales like $\sqrt{d/m}$ in \emph{intrinsic} dimension, 
 \end{tabular}
 \end{table}
 
+\part{Outcomes --- Experiment S, run 13 August}
+
+\section{Results against the predictions}
+
+S5, S1, S3 and S4 were run on all four targets: our geospatial housing scaffold and the three
+published Slack datasets, using Slack's own \texttt{adversarial\char`_models}. 150 anchors per
+target, 400 probes per anchor, frame and radius supplied by local PCA on the 60 nearest real
+points.
+
+\begin{table}[h]
+\small\centering
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+\textbf{\sffamily Target} & \textbf{S5} audit & \textbf{S5} LIME & \textbf{S3} $\rho$
+  & straddle rate & response values\\
+\midrule
+COMPAS & 0.980 & 0.000 & 0.997 & 0.013 & 1\\
+German & 0.900 & 0.000 & 0.987 & 0.253 & 2\\
+Housing & 0.860 & 0.000 & 0.996 & 0.473 & 400\\
+Communities \& Crime & \textbf{0.001} & 0.000 & 0.985 & 0.007 & 2\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent S4 (detector leakage on real points) is $0.000$ on every target, and \textbf{no anchor
+on any target} had $\rho$ below $\rho_{\min}$.
+
+\begin{table}[h]
+\small
+\begin{tabular}{@{}clp{0.50\textwidth}@{}}
+\toprule
+& \textbf{\sffamily Prediction} & \textbf{\sffamily Outcome}\\
+\midrule
+S-1 & detector calls $>80\%$ of our probes real
+    & \textbf{HIT on 3 of 4.} COMPAS 0.98, German 0.91, Housing 0.83 --- against
+      \textbf{0.000} for LIME's own perturbation on every target.
+      \textbf{MISS on Communities \& Crime} (0.001).\\
+S-2 & $\Delta/\sigma_{\text{resid}} > 2.5$, so detection power is not binding
+    & \textbf{FALSIFIED.} Median 1.60 (COMPAS), 1.88 (German), 1.95 (Housing).
+      The real scaffold sits \emph{at} the dip's floor and inside the LRT's
+      $0.42$--$0.54$ band. Power is a live constraint; pooling is not optional.\\
+S-3 & retention falls below $\rho_{\min}$; the audit abstains on its own target
+    & \textbf{FALSIFIED, cleanly.} $\rho = 0.985$--$0.997$ everywhere, zero anchors
+      below threshold. The explicit falsification condition did \emph{not} fire.\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{resultbox}
+\noindent\textbf{The trichotomy resolves to (ii) on housing.} As the probe radius grows,
+invisibility decays gently ($0.94 \to 0.83$) while the fraction of anchors whose ball straddles
+the OOD boundary rises sharply ($0.10 \to 0.53$). \textbf{Both conditions hold at once}: at full
+$k$-NN radius, 83\% of probes are invisible to the detector and 46--53\% of anchors reach the
+gate. COMPAS is regime (i) --- invisible but never crossing. German is mixed, at 25\% crossing.
+\end{resultbox}
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[width=\textwidth]{fig_s_experiment.png}
+\caption{\textbf{Left:} the detector identifies 100\% of LIME's own perturbations and misses
+83--98\% of ours. \textbf{Right:} on housing, invisibility and boundary-crossing hold
+simultaneously across the radius sweep.}
+\end{figure}
+
+\section{The Communities \& Crime miss}
+
+Not a radius or frame artifact: visibility stays at 0.011 with the dimension cap raised to 30,
+and at $2\%$ of the $k$-NN radius. The mechanism appears to be a \textbf{lattice} effect. These
+detectors are extremely sensitive to displacement off the data's discrete structure --- adding
+$10^{-3}$ of noise to a training point drops ``called real'' to $0.000 / 0.000 / 0.046$, while
+genuinely held-out real points are still called real at $\approx 1.0$. So the detector is not
+memorising; it keys on off-grid movement in quantised coordinates.
+
+Tangent-frame probing largely respects that grid, because low-dimensional local PCA on mixed
+tabular data concentrates on the continuous directions. Measured off-lattice fraction: COMPAS
+0.33, Housing 0.62, German 0.69, \textbf{Communities \& Crime 0.96} --- and its features are
+nearly all continuous, so there is no grid to stay on.
+
+\OPENT\ The ordering is right but this is not a clean single-factor explanation: German sits at
+0.69 off-lattice and still reaches 0.91 visibility, so ambient dimension (101 against $\le 29$)
+is plausibly also at work. Directionally supported, not established.
+
+\section{Two consequences for the method}
+
+\paragraph{A discrete-response Stage 3 is a prerequisite for the Slack datasets.} The published
+scaffolds expose \textbf{one or two distinct response values}; housing gives 400. Stage 3 tests
+the shape of a continuous residual distribution and does not apply to a binary response. This is
+the prerequisite flagged in the 31 July review, now confirmed rather than anticipated. Housing is
+unaffected.
+
+\paragraph{A second, sharper claim is now available.} Scaffolding attacks that key on LIME's
+ambient Gaussian perturbation are defeated by any probe family respecting the data's discrete
+structure --- \emph{but not on all-continuous data}. That is a statement about the attack's
+scope, and Communities \& Crime is the counterexample that makes it non-trivial.
+
 \section{Order of execution}
 
 \begin{enumerate}
-\item \textbf{S5, then S1}, on the housing scaffold. Cheap; determines the framing.
-\item \textbf{S3}, since it is the explicit falsification condition and follows directly from
-S5's machinery.
+\item \textbf{S5, then S1} --- \textcolor{okgreen}{done 13~August, all four targets};
+see Part III.
+\item \textbf{S3} --- \textcolor{okgreen}{done}; it did not fire.
 \item \textbf{Experiment P}, with the revised axes and the no-information guard.
 \item S2 and S4; the COMPAS / German / Communities replication once the Slack repository is
 re-obtained.
