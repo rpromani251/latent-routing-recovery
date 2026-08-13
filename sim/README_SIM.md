@@ -106,3 +106,36 @@ clumpy-manifold FP 0.49→0.00 (power 0.57), and unmasks strong trends
 global label matching; vector outputs need any projection with weight
 orthogonal to the within-branch variation, and intercept-at-anchor recovery
 returns the penalty vector at cos 1.000.
+
+## Distance estimator (13 August)
+
+`exp_distance_estimator.py` tests the inversion of the E1(a) crossing law,
+**d_hat = -sigma * Phi^-1(pi_hat)** — the first validation of the central link in
+`docs/boundary_recovery_v5`. It reruns the registered 1-D known-regimes setting
+(DELTA 0.30, ladder geomspace(0.02, 0.2, 3), m = 1000/rung) recording pi_hat **per
+scale**; the existing `sim1d_anchors.csv` stores only a median across scales, so the
+inversion was not testable from it. Orientation is query-only: the anchor's own
+response says which component it sits in, and the crossing mass is the other one.
+
+Outputs `distance_estimator_rows.csv` (3,218 anchor-by-rung rows over six models);
+`fig_distance_estimator.py` builds the two-panel figure.
+
+**Headline.** With two query-only guards (dip fires under Bonferroni, pi_hat in
+[0.05, 0.50]): corr(d_hat, d_true) = **0.9958** (n = 217), median relative error
+**-0.92%**, median absolute error 0.0031, tracking d = 0.012 to 0.251 and flat across a
+10x noise sweep (0.0029 / 0.0031 / 0.0027 at tau = 0.005 / 0.02 / 0.05).
+
+**Second invariance.** Across-rung CV of d_hat is 0.098 for the gated model against
+0.557-1.042 for A11-violating GP nulls and 1.241 for the kink control; honest and
+lengthscale-satisfying GP nulls never fire at all. At CV < 0.15, 56% of gates are
+retained and 93% of confounders rejected.
+
+**Caveat.** This runs the *naive* protocol — 1-D, ambient Gaussian probes, no tangent
+frame, no trimming, no density filter. It validates the inversion, not the inversion
+inside the full pipeline. The estimate is also explicitly conditional on detection:
+without the dip guard, anchors beyond the ladder top return confident nonsense.
+
+    python3 exp_distance_estimator.py     # ~4 min, writes the rows CSV
+    python3 fig_distance_estimator.py     # writes fig_distance_estimator.png
+
+Requires `diptest` for tabled p-values (falls back to the seeded MC null otherwise).

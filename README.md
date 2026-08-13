@@ -67,10 +67,20 @@ implementation; the SBM/pEx thread and the original Phase 1–2 fooling-XAI work
 - **What moved to `legacy/` and why:**
   [`src/detect_recover_interpret/legacy/README.md`](src/detect_recover_interpret/legacy/README.md).
 
-### Since the method note (29 July onward)
+### Current method note (13 August)
+
+- **[`docs/boundary_recovery_v5.pdf`](docs/boundary_recovery_v5.pdf)** — *Recovering a
+  Hidden Routing Boundary from Query-Only Access.* The current note, organised around the
+  object being estimated rather than around a detection statistic: the mixture's *weight*
+  gives distance to the boundary, its *separating direction* gives the normal, and pooling
+  local estimates across anchors yields one hyperplane with error bars. Supersedes
+  `pipeline_v4` and the Stage 0/1 description in `probe_policy_spec`. Source:
+  `boundary_recovery_v5.tex` (needs `fig_distance_estimator.png` alongside it).
+
+### Superseded and supporting documents (29 July onward)
 
 `consolidated_draft_v3` describes the method as of 29 July. Three later documents revise
-it and are not yet reflected in the code:
+it; v5 above consolidates them:
 
 - **Probe geometry and scale selection:**
   [`docs/routing_audit_probe_geometry_consolidated.md`](docs/routing_audit_probe_geometry_consolidated.md)
@@ -92,6 +102,10 @@ it and are not yet reflected in the code:
 > **Implementation gap.** Nothing in `src/` implements Stage 0 (GRIDE, plateau detection,
 > tangent frame, density filter) or the equal-variance mixture LRT. The numbers in the
 > detection-phase review come from a separate reimplementation that was not preserved.
+> Per `boundary_recovery_v5` §15, Stage 0 is deliberately deferred below the critical path:
+> geometry recovery is established first under known-valid local probes, and Stage 0 is the
+> extension that removes that assumption. The density filter is kept regardless, because it
+> scopes the claim rather than improving it.
 
 ## A11 — the binding precondition
 
