@@ -77,6 +77,12 @@ implementation; the SBM/pEx thread and the original Phase 1–2 fooling-XAI work
   `pipeline_v4` and the Stage 0/1 description in `probe_policy_spec`. Source:
   `boundary_recovery_v5.tex` (needs `fig_distance_estimator.png` alongside it).
 
+- **[`docs/experiment_designs.pdf`](docs/experiment_designs.pdf)** — *pre-registration* for
+  Experiment S (scaffold characterisation) and Experiment P (pooled recovery): designs,
+  metrics, falsification conditions, and predicted outcomes stated **before** either is run.
+  Extracts §8–§9 of the 31 July working document and updates the axes for what has been
+  measured since.
+
 ### Superseded and supporting documents (29 July onward)
 
 `consolidated_draft_v3` describes the method as of 29 July. Three later documents revise

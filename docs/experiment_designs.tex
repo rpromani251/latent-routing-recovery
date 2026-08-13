@@ -1,0 +1,455 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1.05in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{mathpazo}
+\usepackage[scaled=0.92]{helvet}
+\usepackage{courier}
+\usepackage{amsmath,amssymb,mathtools,bm}
+\usepackage{booktabs,array,multirow}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usepackage{tcolorbox}
+\usepackage{titlesec}
+\usepackage{caption}
+\usepackage{microtype}
+\usepackage{needspace}
+\usepackage[hidelinks]{hyperref}
+
+\usetikzlibrary{positioning,arrows.meta,calc}
+\tcbuselibrary{skins,breakable}
+
+% ---------------------------------------------------------------- palette
+\definecolor{navy}{RGB}{25,55,92}
+\definecolor{muted}{RGB}{90,96,105}
+\definecolor{rule}{RGB}{200,201,196}
+\definecolor{okgreen}{RGB}{0,110,60}
+\definecolor{specblue}{RGB}{42,120,214}
+\definecolor{newmag}{RGB}{160,45,120}
+\definecolor{openamber}{RGB}{170,110,0}
+\definecolor{limred}{RGB}{175,45,45}
+\definecolor{tint}{RGB}{248,248,246}
+\definecolor{lg}{RGB}{175,177,172}
+
+% ---------------------------------------------------------------- headings
+\titleformat{\section}{\normalfont\sffamily\large\bfseries\color{navy}}{\thesection}{0.7em}{}
+\titleformat{\subsection}{\normalfont\sffamily\normalsize\bfseries\color{navy}}{\thesubsection}{0.6em}{}
+\titleformat{\part}[display]
+  {\normalfont\sffamily\Large\bfseries\color{navy}\filcenter}
+  {\MakeUppercase{\partname~\thepart}}{0.4em}{}
+\titlespacing*{\section}{0pt}{1.5em}{0.6em}
+\titlespacing*{\subsection}{0pt}{1.2em}{0.45em}
+
+% ---------------------------------------------------------------- macros
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Prob}{\mathbb{P}}
+\newcommand{\Ind}{\mathbf{1}}
+\newcommand{\dhat}{\hat{d}}
+\newcommand{\pihat}{\hat{\pi}}
+\newcommand{\nhat}{\hat{n}}
+\newcommand{\chat}{\hat{c}}
+\newcommand{\that}{\hat{t}}
+\newcommand{\Dhat}{\hat{\Delta}}
+
+\newcommand{\provtag}[2]{{\footnotesize\sffamily\textcolor{#1}{[#2]}}}
+\newcommand{\VALID}{\provtag{okgreen}{VALIDATED}}
+\newcommand{\SPEC}{\provtag{specblue}{SPECIFIED}}
+\newcommand{\NEWT}{\provtag{newmag}{NEW}}
+\newcommand{\OPENT}{\provtag{openamber}{OPEN}}
+\newcommand{\LIMIT}{\provtag{limred}{LIMIT}}
+
+\newcommand{\why}[1]{\par\smallskip\noindent\textcolor{muted}{\small\itshape #1}\par\smallskip}
+
+\newtcolorbox{claimbox}[1][]{
+  enhanced, breakable, colback=tint, colframe=navy, boxrule=0pt,
+  leftrule=2.5pt, arc=0pt, outer arc=0pt,
+  left=12pt, right=12pt, top=9pt, bottom=9pt, #1}
+
+\newtcolorbox{resultbox}[1][]{
+  enhanced, breakable, colback=okgreen!4, colframe=okgreen!55, boxrule=0pt,
+  leftrule=2.5pt, arc=0pt, outer arc=0pt,
+  left=12pt, right=12pt, top=9pt, bottom=9pt, #1}
+
+\newtcolorbox{limitbox}[1][]{
+  enhanced, breakable, colback=limred!4, colframe=limred!55, boxrule=0pt,
+  leftrule=2.5pt, arc=0pt, outer arc=0pt,
+  left=12pt, right=12pt, top=9pt, bottom=9pt, #1}
+
+\newtcolorbox{codebox}[1][]{
+  enhanced, breakable, colback=tint, colframe=rule, boxrule=0.5pt,
+  arc=2pt, left=10pt, right=8pt, top=7pt, bottom=7pt,
+  fontupper=\footnotesize\ttfamily, #1}
+
+\newtcolorbox{notebox}[1][]{
+  enhanced, breakable, colback=white, colframe=rule, boxrule=0.5pt,
+  arc=2pt, left=10pt, right=10pt, top=7pt, bottom=7pt,
+  fontupper=\small, #1}
+
+\captionsetup{font=small,labelfont={sf,bf,color=navy}}
+\setlist[itemize]{leftmargin=1.3em,itemsep=2pt,topsep=4pt}
+\setlist[enumerate]{leftmargin=1.6em,itemsep=2pt,topsep=4pt}
+\renewcommand{\arraystretch}{1.15}
+
+\hypersetup{
+  pdftitle={Experiment Designs and Pre-Registration: Experiments S and P},
+  pdfauthor={Robert Romani},
+  pdfsubject={Pre-registration, 13 August 2026},
+}
+
+
+\title{\textcolor{navy}{\sffamily Experiment Designs and Pre-Registration}\\[6pt]
+\large\normalfont Experiment S (scaffold characterisation) and Experiment P (pooled recovery)}
+\author{Robert Romani}
+\date{August 13, 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent This document is a \textbf{pre-registration}. It states the design, the metrics, and
+the predicted outcomes of Experiments S and P \emph{before either is run}, so that the results
+can be reported as hits and misses rather than as a narrative assembled afterwards. The project
+has twice benefited from doing this: two of the four future-work propositions were falsified and
+the repairs became the backbone of the method, and the U-shape prediction for orientation error
+was falsified on 13~August in a way that inverted a design axis.
+
+\medskip
+\noindent Both experiments previously existed only as prose in \S8 and \S9 of
+the 31~July
+detection-phase working document. This note extracts them, updates them
+for what has been measured since, and records what would count as a failure.
+\end{abstract}
+
+\noindent\textbf{\sffamily\small\textcolor{navy}{Provenance tags.}}
+\smallskip
+
+{\small
+\begin{tabular}{@{}ll@{}}
+\VALID & measured against ground truth\\
+\SPEC & designed, not yet run\\
+\NEWT & changed or added since the 31 July design\\
+\OPENT & acknowledged gap\\
+\end{tabular}}
+
+\vspace{0.4em}
+
+\section{Why these two, and in this order}
+
+The method note (\texttt{boundary\char`_recovery\char`_v5}) sets out a four-step critical path. Steps 1
+and 2 are done:
+
+\begin{itemize}
+\item \textbf{Step 1} --- the distance estimator $\dhat = -\sigma\Phi^{-1}(\pihat)$ recovers true
+distance at $r = 0.996$, median relative error $-0.92\%$, flat across a $10\times$ noise sweep.
+\VALID
+\item \textbf{Step 2} --- the separability-derived normal carries \emph{no detectable bias} in
+any of 20 cells; pooled orientation error falls below $3^\circ$ at $N = 100$ down to
+$\Delta/\tau = 1.5$. \VALID
+\end{itemize}
+
+\noindent Experiment P is step 3. Experiment S is not on that path at all --- it characterises
+the \emph{real} target, and every power number in the project to date is against planted
+synthetic gates that we designed ourselves.
+
+\textbf{S runs first, and specifically S5 and S1.} They are cheap, and between them they decide
+what the rest of the summer is for. If the scaffold's jump is $3\text{--}5\sigma$, detection
+power is not a live problem and the binding constraints are coverage and the on-manifold
+tension. And if the OOD detector does not recognise our probe geometry, the paper's claim
+changes from ``we detect the switch'' to ``we are immune to it'' --- which reframes everything
+upstream.
+
+\part{Experiment S --- characterising the actual target}
+
+\section{Premise and build}
+
+\begin{claimbox}
+\noindent Every power figure in this project is measured against gates we planted. Measure what
+the real attack induces \emph{before} optimising further against synthetic ones.
+\end{claimbox}
+
+\noindent The target is the Slack et al.\ (AIES 2020) scaffolding attack: a biased model $f$
+that uses a sensitive attribute, an innocuous $\psi$ that uses an uncorrelated synthetic
+feature, and an OOD detector --- a random forest trained to separate real data from
+LIME-perturbed samples --- routing between them.
+
+\paragraph{Audit the score, not the label.} The framework presumes a continuous response. The
+housing scaffold in \texttt{src/attacks/}\allowbreak\texttt{scaffold.py} returns continuous predictions, so this is
+satisfied. If a dataset exposes only hard labels, stop and record that a discrete-response
+Stage~3 variant is a prerequisite rather than a tweak.
+
+\paragraph{Data availability, checked 13 August.} \NEWT\ The \textbf{housing scaffold is
+runnable now}: \texttt{seattle\char`_sample\char`_3k.csv} and the demographics join are present, the
+scaffold and both OOD detector constructors are in \texttt{src/attacks/}, and
+\texttt{ood\char`_detector.}\allowbreak\texttt{predict\char`_proba} is directly callable. The \textbf{COMPAS, German Credit
+and Communities-and-Crime datasets are absent} --- \texttt{papers/} contains only
+\texttt{pexsbm}, not the Slack repository, and only downstream result directories survive. S
+therefore runs on housing first; the other three require re-obtaining the Slack repository and
+are deferred, not dropped.
+
+\section{The five measurements}
+
+\subsection*{S1 --- what is the scaffold's $\Delta/\sigma_{\text{resid}}$?}
+
+Sample point pairs straddling the OOD decision boundary at matched covariate distance; measure
+the jump in audited output relative to the LTS residual scale at the same anchors.
+
+This is the single number that determines whether detection power is a live problem at all.
+Reference points from the measured floor: the dip has \emph{zero} power below $\approx 2\sigma$
+(the mixture is literally unimodal there), and the equal-variance LRT reaches $0.42$--$0.54$ at
+$1.5\sigma$ and $1.00$ at $2.5\sigma$.
+
+\subsection*{S5 --- what does the detector call \emph{our} probes?}
+
+Generate the audit's probe cloud at real anchors and ask the OOD detector to classify it.
+
+The audit's perturbation is not LIME's. LIME perturbs every feature, ambiently, with unit
+Gaussian noise; the detector is trained on exactly that. Ours is isotropic within a
+$\hat d$-dimensional tangent frame at small radius. \textbf{The detector was never trained
+against our probe geometry.}
+
+\subsection*{S2, S3, S4}
+
+\begin{itemize}
+\item \textbf{S2 --- boundary accessibility.} Fraction of real held-out points lying within
+$r_{\text{hi}}$ of the OOD boundary. This is coverage for the real target, as opposed to
+coverage in a simulation where anchors are placed by design.
+\item \textbf{S3 --- density-filter tension.} For anchors whose ball crosses the OOD boundary,
+record the retention $\rho$.
+\item \textbf{S4 --- detector leakage.} Fraction of real points the OOD detector misclassifies.
+This is the on-manifold region where crossing is possible without leaving support.
+\end{itemize}
+
+\begin{limitbox}
+\noindent\textbf{S3 is an explicit falsification condition.} If $\rho$ falls below the abstention
+threshold at essentially every anchor whose ball crosses the OOD boundary, then \texttt{A3} fires
+wherever the signal is and \textbf{the method abstains on its own target}. Report that as a
+falsification, not as a tuning problem.
+\end{limitbox}
+
+\section{The pre-registered trichotomy}
+
+S5 determines which of three regimes the scaffold falls into. All three are reportable; two are
+wins.
+
+\begin{table}[h]
+\small
+\begin{tabular}{@{}cp{0.40\textwidth}p{0.42\textwidth}@{}}
+\toprule
+& \textbf{\sffamily What S5 shows} & \textbf{\sffamily What it means}\\
+\midrule
+(i) & probes are classified as real; we query $f$ throughout the ball
+    & No gate to detect --- but our attributions are of the \emph{biased} model.
+      \textbf{The scaffold is defeated by evasion rather than by detection.} A paper result,
+      differently framed.\\
+(ii) & probes straddle the OOD boundary
+    & Gate detected. The method works as designed on the real target.\\
+(iii) & probes are classified OOD; we see only $\psi$
+    & Fooled. The density filter is supposed to prevent this --- verify that it does.\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Prediction, stated before running.} \NEWT\ \textbf{Regime (i).} The LIME detector is
+trained on ambient $N(0, 0.3)$ perturbations across \emph{all} features; our probes live in a
+$\hat d$-dimensional tangent frame with zero component off it. Different geometry entirely.
+Concretely: \textbf{we predict the detector classifies $> 80\%$ of our probes as real}, and that
+the audited response is $f$ rather than $\psi$ over the great majority of each probe ball.
+
+\paragraph{The structural reading, if (i) holds.} Regimes (i) and S3 are two faces of one fact:
+the gate fires off-manifold, so an on-manifold auditor either never sees it (immune) or must
+leave the manifold to see it --- at which point the density filter rejects the probes and the
+claim degrades from \emph{a gate fires on deployed inputs} to \emph{a gate exists somewhere in
+input space}. Stating that cleanly is arguably a stronger contribution than a detection number:
+\textbf{scaffolding attacks hide in the region an on-manifold audit is definitionally excluded
+from.}
+
+\part{Experiment P --- pooled recovery}
+
+\section{Design principle}
+
+\begin{claimbox}
+\noindent False positives and true positives differ \emph{geometrically}, not merely in
+strength. A real boundary produces a consistent normal across every anchor touching it; a
+spurious detection produces a random one. Pooling on geometric agreement suppresses false
+positives faster than it accumulates true ones --- which is what is wanted when per-anchor power
+is around $0.5$.
+\end{claimbox}
+
+\noindent Two corollaries. \textbf{Do not threshold per anchor before pooling}: at power $0.5$
+that discards half the true signal. And the figure of merit becomes the number of anchors
+required to recover the boundary, not per-anchor power.
+
+\section{The per-anchor primitive}
+
+Computed for \textbf{every} anchor, including those that do not fire.
+
+\begin{codebox}
+\begin{verbatim}
+1. 2-GMM EM on the LTS residuals            -> responsibilities gamma
+2. linear discriminant on (z, gamma)        -> normal nu, offset b
+   *** fit on ALL probes, not the LTS inlier set ***          [NEW]
+3. lift to ambient:  n_a = U nu / ||U nu||
+   oriented so the higher-mean component is on the + side
+4. signed offset:    c_a = n_a . x_a + b / ||nu||
+5. weight:           w_a = LRT statistic, NOT thresholded
+
+   each anchor emits (n_a, c_a, d_hat_a, Delta_hat_a, w_a)
+\end{verbatim}
+\end{codebox}
+
+\noindent Steps 1--3 are \VALID\ as of 13~August. Step 2's ``all probes'' qualifier is
+\NEWT: median orientation error is $5.8^\circ$ fitting on every probe against $21.9^\circ$ on
+the LTS inlier set, because the trim removes points that are predominantly the minority branch
+--- exactly the branch carrying the crossing signal. Soft responsibilities also beat hard
+$\gamma > 0.5$ labels ($5.8^\circ$ against $7.6^\circ$).
+
+\section{Estimators and null}
+
+\begin{table}[h]
+\small\centering
+\begin{tabular}{@{}cp{0.52\textwidth}p{0.28\textwidth}@{}}
+\toprule
+& \textbf{\sffamily Estimator} & \textbf{\sffamily Uses geometry}\\
+\midrule
+A & Fisher/Stouffer combination of per-anchor $p$-values & no --- baseline\\
+B & threshold on $w_a$, then cluster $(n,c)$ in projective space (antipodal identification),
+    requiring $|\cos(n_a,n_b)| > 1-\epsilon$ and $|c_a - c_b| < \delta$ & partly\\
+C & $w$-weighted mode-seeking (mean-shift or Hough voting) over \emph{all} anchors, no
+    thresholding & fully\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Null.} Permute the residual-to-point assignment within each anchor and rerun the
+pipeline from step 1. This randomises the normals while preserving the marginal residual
+distributions. $\ge 500$ permutations.
+
+\section{Generative setting} \NEWT
+
+Flat intrinsic $d = 2$ manifold in ambient $D = 20$; a single planted hyperplane; the tangent
+frame supplied, per the Stage-0 deferral.
+
+\begin{table}[h]
+\small\centering
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{\sffamily Axis} & \textbf{\sffamily 31 July design} & \textbf{\sffamily Revised, 13 August}\\
+\midrule
+$\Delta/\sigma_{\text{resid}}$ & $\{1.0, 1.5, 2.5, 5.0\}$ & unchanged\\
+$\pi$ & $\{0.10, 0.25, 0.50\}$ & $\bm{\{0.05,\ 0.10,\ 0.20\}}$\\
+$N$ anchors & $\{5,10,25,50,100,200\}$ & unchanged\\
+anchor distance $/\,r_{\text{hi}}$ & $\{0.2, 0.5, 0.9, 1.5\}$
+  & \textbf{shell} $\bm{d/\sigma \in [1.28, 1.64]}$, plus a non-crossing control\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Why the two axes moved.} Orientation error is \textbf{monotone increasing in $\pi$},
+not U-shaped as originally predicted: per-anchor standard deviation runs $3.9^\circ$ at
+$\pi = 0.05$ to $47.5^\circ$ at $\pi = 0.50$ (at $\Delta/\tau = 5$). Fewer crossers, but they
+sit further out along the normal, and the separation of class-conditional means along $n$
+\emph{rises} as $\pi$ falls --- $2.17\sigma$ at $\pi = 0.05$ against $1.60\sigma$ at
+$\pi = 0.50$. At $\pi \to 0.5$ there is additionally no majority branch for LTS to commit to.
+
+Since $\pi \le 0.10$ means $d \ge 1.28\sigma$ and the minimum-mass rule caps $\pi \ge 0.05$
+at $d \le 1.64\sigma$, the orientation-useful anchors occupy a \textbf{shell}. The original
+distance axis sampled the wrong side of it.
+
+\begin{limitbox}
+\noindent\textbf{A deployment consequence P must measure.} That shell is roughly 22\% of the
+anchors that can detect anything at all, which are themselves 15--20\% of randomly placed
+anchors --- so on the order of \textbf{3--4\% of anchors in deployment}. Pooling is weighted
+rather than thresholded, so higher-$\pi$ anchors still contribute, but $N_{95}$ under
+\emph{random} placement may be far larger than $N_{95}$ under placement by design.
+\textbf{Report both.}
+\end{limitbox}
+
+\section{Metrics}
+
+\begin{enumerate}
+\item $N_{50}$ and $N_{95}$ per estimator per $\Delta$, \textbf{under both by-design and random
+anchor placement}. \NEWT\ Headline.
+\item Estimator ranking.
+\item $N \mapsto$ orientation error and $N \mapsto |\chat - c^\star|$. The first is partly
+previewed (\S1); the second is untested.
+\item False-positive rate under the permutation null.
+\end{enumerate}
+
+\noindent Secondary: two parallel boundaries at separation $\in \{0.5, 2, 5\}\cdot r_{\text{hi}}$
+--- does mode-seeking resolve two modes or merge them? This sets the resolution limit for telling
+one gate from two. And a curved boundary (the deep-gate preimage): pool locally, then link, and
+report where the local-hyperplane approximation fails as a function of curvature $\times\,
+r_{\text{hi}}$.
+
+\section{The no-information guard} \NEWT
+
+\begin{limitbox}
+\noindent Outside the operating region --- $\Delta/\tau = 1.0$ at any $\pi$, or
+$\pi \gtrsim 0.35$ --- the per-anchor rotation has standard deviation $\approx 52^\circ$, which
+is exactly what uniformly random directions give. Pooling uninformative \emph{axial} estimates
+does not converge to the truth and does not converge to nothing: the mean direction of $N$
+random axes is itself uniformly random, so the pooled estimate lands on an arbitrary direction
+with an interval that \emph{tightens} around it.
+\end{limitbox}
+
+\noindent \textbf{Pooling can therefore be confidently wrong in a way that per-anchor abstention
+never is.} This is the second failure mode of that character in the method --- the first being
+the $L < r_{\text{hi}}$ degeneracy, where a ball spanning several routing cells reads as
+heteroscedastic noise and Stage~0 is blind to it.
+
+P must include an explicit check that the anchor set carries information before it reports. The
+permutation null is the natural instrument, since a genuinely uninformative anchor set should be
+statistically indistinguishable from a permuted one. \textbf{Designing and calibrating that
+guard is part of P, not a follow-up.}
+
+\part{Pre-registered predictions}
+
+\section{Stated before running; report hits and misses}
+
+\begin{table}[h]
+\small
+\begin{tabular}{@{}cp{0.36\textwidth}p{0.44\textwidth}@{}}
+\toprule
+\textbf{\sffamily \#} & \textbf{\sffamily Prediction} & \textbf{\sffamily What falsifies it}\\
+\midrule
+S-1 & The OOD detector classifies $> 80\%$ of our tangent-frame probes as \emph{real} ---
+      trichotomy regime (i). & $< 80\%$; or probes are called OOD, which is regime (iii).\\
+S-2 & The scaffold's $\Delta/\sigma_{\text{resid}}$ exceeds $2.5$, so detection power is not the
+      binding constraint. & A measured ratio below $\approx 1.5$, which puts the real target
+      under the floor.\\
+S-3 & Retention $\rho$ at boundary-crossing anchors falls below $\rho_{\min}$, so the audit
+      abstains where the signal is. & $\rho$ comfortably above threshold --- in which case the
+      on-manifold tension is not binding here.\\
+P-1 & Estimator ranking $C > B > A$ at every $\Delta$, with the $C - B$ gap largest at
+      $\Delta = 1.5\sigma$. & Any reordering; in particular $B \ge C$ would mean thresholding
+      costs nothing.\\
+P-2 & A real gate produces a \textbf{single mode} in the pooled offset $c$; resonant curvature
+      produces a \textbf{comb} of modes spaced by its wavelength $\ell$. & A comb for a gate, or
+      a single mode for resonant curvature --- either would put smooth rejection back on the
+      per-anchor decision rules.\\
+P-3 & $N_{95}$ under random anchor placement exceeds $N_{95}$ under by-design placement by
+      roughly the inverse shell fraction ($\sim 20\text{--}30\times$). & A much smaller
+      penalty, meaning higher-$\pi$ anchors contribute more than the per-anchor numbers imply.\\
+P-4 & Orientation error scales like $\sqrt{d/m}$ in \emph{intrinsic} dimension, so it degrades
+      at $d = 4, 8$. \OPENT\ (not run at $d = 2$) & Error flat in $d$, which would extend E1's
+      dimension-independence result from ambient to intrinsic dimension.\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Order of execution}
+
+\begin{enumerate}
+\item \textbf{S5, then S1}, on the housing scaffold. Cheap; determines the framing.
+\item \textbf{S3}, since it is the explicit falsification condition and follows directly from
+S5's machinery.
+\item \textbf{Experiment P}, with the revised axes and the no-information guard.
+\item S2 and S4; the COMPAS / German / Communities replication once the Slack repository is
+re-obtained.
+\end{enumerate}
+
+\noindent Results are reported against the table in \S13 --- hits and misses, in that form.
+
+\end{document}
