@@ -139,3 +139,57 @@ without the dip guard, anchors beyond the ladder top return confident nonsense.
     python3 fig_distance_estimator.py     # writes fig_distance_estimator.png
 
 Requires `diptest` for tabled p-values (falls back to the seeded MC null otherwise).
+
+## Normal estimator -- step 2 (13 August)
+
+`exp_normal_estimator.py` tests whether the separability classifier's decision
+boundary, lifted through the tangent frame, recovers the gate's normal. Intrinsic
+d = 2, ambient D = 20, frame **supplied** (Stage 0 deferred), 200 anchors per cell
+over a Delta/tau x pi grid, m = 1000 probes/anchor. The true normal is drawn per
+anchor so no coordinate is privileged; error is angle(n_hat, n) modulo sign.
+
+**The question.** Responsibilities are estimated, not true branch labels, so the
+chain misassignment -> classifier label noise -> bias in n_hat could dominate near
+weak separation. The oracle arm (true labels) gives the variance floor; the gap to
+the estimated-responsibility arm is the misassignment cost.
+
+**Result: variance, not bias.** Per-cell mean signed rotation is -0.35 to +0.27 deg
+for the oracle arm and -6.6 to +5.9 deg for the soft arm, **not significant at 95%
+in any of the 20 cells**. The symmetry argument holds: responsibilities are a
+function of the 1-D residual, the residual is a function of z.n, so the
+class-conditional means of z stay on n however corrupted the labels. Bias survives
+pooling; variance does not -- so this is the outcome that matters. Pooled
+orientation error falls as 1/sqrt(N): at pi = 0.05, 6.8 -> 0.9 deg from N = 1 to 100
+at Delta/tau = 2.5, and 20.4 -> 1.8 deg at Delta/tau = 1.5.
+
+**Prediction falsified.** Orientation error is *monotone increasing* in pi, not
+U-shaped. Per-anchor sd at Delta/tau = 5 runs 3.9 deg at pi = 0.05 to 47.5 deg at
+pi = 0.50. Fewer crossers, but they sit further out along the normal: the separation
+of class-conditional means along n is 2.17 sigma at pi = 0.05 against 1.60 sigma at
+pi = 0.50. Useful anchors sit at d ~ 1.3-1.6 sigma. This *inverts* Experiment P's
+distance axis, whose small values place anchors close to the boundary.
+
+**Two design findings.** Fit the discriminant on ALL probes, not the LTS inlier set
+(5.8 vs 21.9 deg median error) -- the trim removes predominantly the minority branch,
+which carries the crossing signal. And soft responsibilities beat hard gamma > 0.5
+labels (5.8 vs 7.6 deg).
+
+**Scope.** The operating region is Delta/tau >= 1.5 AND pi <= 0.10. Outside it the
+per-anchor sd is ~52 deg, which is what uniformly random directions give. Pooling
+uninformative *axial* estimates converges to an arbitrary direction with a tightening
+interval -- confidently wrong rather than abstaining. Stage 6 needs a no-information
+guard; see boundary_recovery_v5 sec. 12.
+
+**Caveat.** Intrinsic d = 2 only. The discriminant is a direction in R^d, so error
+should scale with *intrinsic* d -- E1's dimension-independence result is about
+*ambient* D and does not transfer. The d in {4, 8} sweep is a parameter change in
+this harness.
+
+    python3 exp_normal_estimator.py    # ~7 min
+    python3 fig_normal_estimator.py
+
+Outputs `normal_estimator_rows.csv` (4,000 anchors) and
+`normal_estimator_probelog.csv.gz` (per-probe z, response, true label, fitted
+responsibility, trim mask, filter mask for 2 anchors/cell) -- enough to reconstruct
+any downstream arm (oracle/soft/hard labels, trim on-off, filter on-off) as
+post-processing, without a rerun. The script is seeded, so a rerun reproduces it.

@@ -584,13 +584,75 @@ ladder top return confident nonsense (true $0.277$ against estimated $0.141$, wi
 spread), because $\pihat$ there is not a crossing fraction at all. The guard is query-only, so
 this is legitimate---but the conditioning belongs in the claim.
 
-\paragraph{Direction.} \SPEC\ The separability classifier's boundary, lifted to ambient space:
+\paragraph{Direction.} \VALID\ The separability classifier's boundary, lifted to ambient space:
 \[
   n_a \;=\; \frac{U\nu}{\lVert U\nu \rVert}
   \qquad\text{(oriented: higher-mean component on the $+$ side)},
   \qquad
   c_a \;=\; n_a^\top x_a + \frac{b}{\lVert\nu\rVert}.
 \]
+
+Measured 13~August at intrinsic $d = 2$, ambient $D = 20$, frame supplied, 200 anchors per
+cell over a $\Delta/\tau \times \pi$ grid. The concern this had to answer is that
+responsibilities are \emph{estimated}, not true branch labels, so the chain
+misassignment $\to$ classifier label noise $\to$ bias in $\nhat$ could dominate everything
+else near weak separation. It does not:
+
+\begin{resultbox}
+\noindent\textbf{\sffamily Misassignment costs variance, not bias.} Mean signed rotation per
+cell: the oracle arm (true branch labels) lies in $[-0.35^\circ, +0.27^\circ]$; the
+estimated-responsibility arm lies in $[-6.6^\circ, +5.9^\circ]$ and is \textbf{not
+significant at 95\% in any of the 20 cells}.
+
+\smallskip
+\noindent This is the symmetry argument holding: the responsibilities are a function of the
+one-dimensional residual, the residual is a function of $z^\top n$, and so the
+class-conditional means of $z$ remain on $n$ however badly the labels are corrupted.
+Corrupted labels \emph{attenuate} the separation; they do not rotate it.
+\end{resultbox}
+
+\noindent Because bias is what survives pooling and variance is not, this is the outcome
+that matters. Pooled orientation error falls as $1/\sqrt{N}$: at $\pi = 0.05$ it goes
+$6.8^\circ \to 0.9^\circ$ between $N = 1$ and $N = 100$ at $\Delta/\tau = 2.5$, and
+$20.4^\circ \to 1.8^\circ$ at $\Delta/\tau = 1.5$ --- which is below the dip's floor
+entirely.
+
+\paragraph{Fit the discriminant on all probes, not on the trimmed inliers.} \NEWT\ Median
+orientation error in the informative cells is $5.8^\circ$ using every probe against
+$21.9^\circ$ using the LTS inlier set. The trim removes points that are predominantly the
+minority branch --- which is exactly the branch carrying the crossing signal. So: trim to
+obtain clean residuals for the \emph{mixture}, then discard the mask for the
+\emph{discriminant}. Soft responsibilities also beat hard $\gamma > 0.5$ labels
+($5.8^\circ$ against $7.6^\circ$); keep the uncertainty.
+
+\begin{figure}[!ht]
+\centering
+\includegraphics[width=\textwidth]{fig_normal_estimator.png}
+\caption{\textbf{Left:} per-anchor information against the mixing fraction. Signal lives at
+\emph{low} $\pi$; $52^\circ$ is what uniformly random directions give. \textbf{Right:}
+pooled orientation error against the number of anchors, at $\pi = 0.05$.}
+\end{figure}
+
+\paragraph{Where the useful anchors are, and it is not where one would guess.} \NEWT\
+Per-anchor orientation error is \textbf{monotone increasing in $\pi$}, not U-shaped: at
+$\Delta/\tau = 5$ the per-anchor standard deviation runs $3.9^\circ$ at $\pi = 0.05$ to
+$47.5^\circ$ at $\pi = 0.50$. Fewer crossers, but they sit much further out along the
+normal, and the separation of class-conditional means along $n$ \emph{rises} as $\pi$ falls:
+
+\begin{center}\small
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+$\pi$ & 0.05 & 0.10 & 0.20 & 0.35 & 0.50\\
+\midrule
+mean separation along $n$ & $2.17\sigma$ & $1.95\sigma$ & $1.75\sigma$ & $1.63\sigma$ & $1.60\sigma$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent At $\pi \to 0.5$ there is additionally no majority branch for LTS to commit to, so
+the plane lands between branches and corrupts the residuals the mixture sees. The useful
+anchors sit at $d \approx 1.3\text{--}1.6\,\sigma$. This agrees with the distance estimator,
+which is also most accurate at larger $d/\sigma$, so a single rung serves both.
 
 \paragraph{Weight.} $w_a$ is the LRT statistic, \textbf{not thresholded}. At per-anchor power
 near $0.5$, thresholding before pooling discards half the true signal.
@@ -701,6 +763,17 @@ C & $w$-weighted mode-seeking (mean-shift / Hough) over all anchors & fully\\
 $\Delta = 1.5$ sd, where half the true detections sit below any per-anchor threshold and $B$
 throws them away.
 
+\paragraph{A no-information guard is required.} \NEWT\ Outside the operating region ---
+$\Delta/\tau = 1.0$ at any $\pi$, or $\pi \gtrsim 0.35$ --- the per-anchor rotation has
+standard deviation $\approx 52^\circ$, which is exactly what uniformly random directions
+give. Pooling \emph{axial} estimates that carry no information does not converge to the
+truth and does not converge to nothing: the mean direction of $N$ random axes is itself
+uniformly random, so the pooled estimate lands on an arbitrary direction with an interval
+that tightens around it. \textbf{Pooling can therefore be confidently wrong in a way that
+per-anchor abstention never is.} Stage 6 needs an explicit check that the anchor set carries
+information before it reports --- the permutation null is the natural instrument, since
+uninformative input should be indistinguishable from permuted input.
+
 \paragraph{Null.} Permute the residual-to-point assignment within each anchor and rerun the
 pipeline. This randomises normals while preserving marginal residual distributions;
 $\ge 500$ permutations.
@@ -766,9 +839,15 @@ deliverable, not a finishing touch.} Under the detector framing, nothing require
 \begin{enumerate}
 \item \textbf{Validate $\dhat = -\sigma\Phi^{-1}(\pihat)$.} \textcolor{okgreen}{Done 13~August}
 (\S\ref{sec:stage4}).
-\item \textbf{Validate the separability-derived normal.} Not started; needs a $d \ge 2$ harness.
+\item \textbf{Validate the separability-derived normal.} \textcolor{okgreen}{Done 13~August}
+(\S\ref{sec:stage4}): no detectable bias in any cell, and pooled error below $3^\circ$ at
+$N = 100$ down to $\Delta/\tau = 1.5$. Intrinsic $d = 2$ only --- the sweep over
+$d \in \{4, 8\}$ is a parameter change in the same harness and remains to be run.
 \item \textbf{Experiment P} $\to$ $N \mapsto$ orientation error, $N \mapsto |\chat - c^\star|$,
-$N_{95}$.
+$N_{95}$. \emph{Revise the distance axis:} the design specified anchor distance
+$/\,r_{\text{hi}} \in \{0.2, 0.5, 0.9, 1.5\}$, whose small values place anchors close to the
+boundary --- which \S\ref{sec:stage4} shows is exactly where orientation is worst. Sample
+the low-$\pi$ region instead.
 \item \textbf{Axis-aligned threshold recovery with a \emph{calibrated} interval.}
 \end{enumerate}
 
@@ -783,7 +862,8 @@ fails. Deferred, not dropped: \S\ref{sec:stage0} remains the specification, and 
 steps 2--4 must state the conditioning explicitly. The one part of Stage~0/1 kept regardless is
 the \textbf{density filter}, because it scopes the claim rather than improving it.
 
-\paragraph{Where the error budget probably lives, for step 2.} Responsibilities are
+\paragraph{Where the error budget lives --- answered.} \emph{The prediction below was made
+before step 2 and is retained with its outcome.} Responsibilities are
 \emph{estimated}, not true branch labels. The chain runs: mixture misassignment $\to$ classifier
 label noise $\to$ bias in $\nhat$. Near weak separation the responsibilities go diffuse
 ($\gamma \approx 0.5$ almost everywhere) and the discriminant direction destabilises; this may
@@ -792,6 +872,10 @@ dominate finite-sample error entirely in the regime that matters. The clean way 
 difference the orientation errors, as a function of $\Delta/\tau$ and $\pi$, not only $N$. If that
 gap is large at $\Delta = 1.5$ sd, pooling must weight by \emph{assignment confidence} rather than
 by the LRT statistic alone.
+
+\emph{Outcome:} the gap is entirely variance. Bias is not significant in any cell, so
+weighting by the LRT statistic is not disqualified, and the binding constraint turns out to
+be anchor \emph{placement} ($\pi \le 0.10$) rather than the weighting rule.
 
 \section{Scope: this is a locally single-boundary method}
 \label{sec:scope}
@@ -859,7 +943,13 @@ Group-conditional estimand at the anchor & \VALID\ cosine $1.000$\\
 \textbf{Distance invariance across rungs} & \VALID\ \textbf{CV $0.098$ vs $0.56$--$1.24$}\\
 Round-consistency plateau; rank-decade $W$; A1/A1n split & \NEWT, unimplemented\\
 Stage 0 entire (GRIDE, plateau, frame) & \SPEC\ --- no implementation exists\\
-Boundary normal from the separability classifier & \SPEC\ --- \textbf{step 2}\\
+\textbf{Boundary normal from the separability classifier}
+  & \VALID\ \textbf{no bias in 20/20 cells}\\
+Pooled orientation error $< 3^\circ$ at $N = 100$, $\Delta/\tau \ge 1.5$ & \VALID\ (at $d = 2$)\\
+Discriminant on all probes, not LTS inliers & \NEWT\ $5.8^\circ$ vs $21.9^\circ$\\
+Orientation error monotone increasing in $\pi$ & \VALID\ --- prediction of a U-shape falsified\\
+No-information guard for pooling & \NEWT\ --- required, not yet designed\\
+Intrinsic-dimension scaling of orientation error & \OPENT\ --- $d = 2$ only\\
 Offset-agreement check & \NEWT\\
 Pooling, permutation null, $N_{95}$ & \SPEC\ --- Experiment P\\
 Comb-versus-single-mode discriminator & \NEWT\ --- register before running\\
