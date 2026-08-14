@@ -1,0 +1,85 @@
+Recovery pipeline: calibration, t_hat interval, and the ladder -- three runs, four retractions
+
+Consolidates 14-15 August. Change-list against the method note in
+docs/method_revisions_2026-08-15.md; full evidence in the three sim/RESULTS_*.md.
+
+EXPERIMENT B -- the full-pipeline bootstrap (sec.9 Stage 3, sec.17 open item).
+Both halves of the registered recipe fail, in opposite directions. Resampling INLIER
+residuals inflates the null LRT median from a true 0.65 to 67.79, so every p-value is
+1.000 on honest and gated surfaces alike -- the inlier set is the truncated middle 75%
+(kurtosis 2.11 against the noise's 2.99) and the pipeline truncates it again. Resampling
+ALL residuals is contaminated by the gate under H1 (null median 11.91 at Delta/tau =
+1.95). And the premise it was meant to fix is untrue: Stage 2 residualises ALL points, so
+the trim selects the FIT, not the TEST SAMPLE. Pipeline null q95 5.459 against untrimmed
+clean-Gaussian 5.543 at B = 20,000 each; the clean threshold has size 0.0476. The null is
+invariant to rung, tau, trend and anchor -- observed per-anchor spread 0.51 against 0.50
+for pure B = 300 resampling -- so the correct object is ONE parametric Monte-Carlo null
+computed once at high B, 20x more accurate and 300x cheaper. Only m matters: 5.62 at
+m = 400, 4.99 at m = 2000. The July 6.08 is reproduced exactly by clean draws at m = 400.
+
+Two heuristics deleted. The MINIMUM-MASS rule is not an estimability gate: it passes
+0.990-0.995 on a surface with no gate anywhere, and rejects (0.748) where EM finds a real
+four-crosser minority. The DIP's floor is a function of pi, not the stated ~2 sd constant:
+3 sd at pi = 0.50, 6 at 0.10, >7 at 0.05, against a real scaffold at 1.6-1.95. Calibrating
+the dip through the pipeline restores nominal size but buys no power and raises
+resonant-curvature FP from 0.058 to 0.557. Keep it on its tabled p-value; the LRT is the
+detector.
+
+Detection power peaks at d/sigma 1.3-1.6 -- the same shell orientation and distance want.
+The pi conflict is the ladder's, not orientation's.
+
+EXPERIMENT T -- axis dominance and t_hat (sec.13 Stage 7, sec.14 the obligation).
+Stage 7's permutation calibration is structurally broken: n_hat always lies in span(U) and
+permuting within an anchor leaves the frame untouched, so an axis-aligned gate that is
+visible at all forces an axis-aligned frame and the null becomes |cos phi|, q95 =
+sin(0.95 pi/2) = 0.9969 (measured 0.86-0.999). The rule reduces to "is orientation error
+below 4.5 degrees". False-claim rate on oblique gates 0.20-0.79. Bootstrap-stability, the
+obvious repair, is worse -- ~1.000 at every tilt including fully oblique; stability is not
+validity. The fix is a reframing: axis dominance is an EQUIVALENCE claim, so bound the
+off-axis angle from above and claim a feature only below a stated tolerance. False-claim
+rate 0.000 beyond tolerance, and the bound tracks the true tilt to a tenth of a degree.
+
+THE INTERVAL ON t_hat COVERS AT 0.00, and gets worse with N -- bias plus a shrinking
+interval. Two independent defects in the offset. (1) Origin amplification, multiplicative
+and dominant: c_a uses each anchor's OWN normal, so the term carrying the threshold's
+magnitude is attenuated by E[cos phi]. Experiment P measured this at c_true = 0, where a
+multiplicative bias is invisible by construction. (2) The LDA midpoint is not the boundary
+unless the split is balanced: 0.780 sigma against a true 1.282 at pi = 0.10. Repair:
+project each anchor's boundary POINT onto the POOLED normal, and take the distance from
+the crossing law rather than the LDA midpoint. Coverage 0.945-0.998 and the interval is 5x
+NARROWER. sec.11 Stage 5(c) already contains both routes but calls their comparison a
+specification check "agreeing by construction" -- they do not agree, and one arm is biased.
+
+EXPERIMENT L -- the ladder cannot be re-anchored, and an Experiment A result is retracted.
+Widening the ladder makes every axis worse: gate power 0.636 -> 0.148, every resonant
+surface pinned at 1.000, and the scaling exponent stops discriminating because a wide ball
+sees the sine's scale-free full amplitude. The geometric reason: the estimable window in
+d/sigma is [0.67, 1.64], a factor of 2.4, while a 3-rung ratio-2 ladder spans a factor of
+4. THE LADDER DOES NOT FIT INSIDE THE WINDOW at any position. The exponent is fittable at
+17% of gate anchors and 100% of curvature anchors -- available where it is not needed.
+
+RETRACTION. Commit 125555a's "at pi_top = 0.35 all three rungs are estimable and r^0 is
+recovered exactly" is reproduced ON AN HONEST SURFACE WITH NO GATE (3.00 rungs, alpha
+-0.052, closer to zero than the real gate's -0.160). Min-mass passes noise, and EM on
+noise returns a Delta_hat scaling with tau, independent of radius, hence alpha = 0. That
+result was measuring noise's scale-freedom. Withdraw it.
+
+CONSEQUENCE. The scaling exponent leaves the selection rule, so screening has no
+multi-scale defence against curvature -- and the calibrated LRT fires at 1.000 on resonant
+against 0.203 on the real target, so a screen enriches the confounder 5x. The separability
+guard is the only remaining discriminator and has never been tested. It moves onto the
+critical path ahead of screen -> select -> recover.
+
+MACHINERY. sim/fast_em.py batches the equal-variance EM for null replicates: the
+responsibility is sigmoid(a + b*y), linear in the observation, so the (chains x points x
+components) tensor collapses and sum(y), sum(y^2) are fixed across iterations. Same inits,
+update order, convergence test and best-of-inits rule. Verified against the reference over
+60 residual shapes spanning LRT -0.02 to 218: max relative difference 5e-10.
+verify_bootstrap.py runs 10 checks and exits 0.
+
+Also: docs/plain_status.md (plain-language status map, including the four-rung realism
+ladder for target selection) and docs/related_work_positioning.md (GeoDA and active
+halfspace learning; the distinction is observable versus latent route membership).
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_017TergaVdinWVoWAJVjEy1o

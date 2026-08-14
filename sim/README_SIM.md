@@ -193,3 +193,68 @@ Outputs `normal_estimator_rows.csv` (4,000 anchors) and
 responsibility, trim mask, filter mask for 2 anchors/cell) -- enough to reconstruct
 any downstream arm (oracle/soft/hard labels, trim on-off, filter on-off) as
 post-processing, without a rerun. The script is seeded, so a rerun reproduces it.
+
+## Full-pipeline bootstrap -- Experiment B (14 August)
+
+`exp_bootstrap_calibration.py` closes the open item in `boundary_recovery_v5` sec.17
+("no full-pipeline bootstrap yet") and the Stage-3 calibration item in sec.10. Full
+write-up with every table: **`RESULTS_bootstrap_2026-08-14.md`**.
+
+**The registered recipe is wrong in both directions.** Regenerating responses from
+resampled *inlier* residuals inflates the null LRT from a true median of 0.65 to
+**67.8**, so every p-value is 1.000 -- the inlier set is the truncated middle 75% of
+the residuals (kurtosis 2.11 against the noise's 2.99), and feeding that back through a
+pipeline that trims again compounds the deformation. Resampling *all* residuals fails
+differently: under a gate it resamples the gate's own bimodality into the null (median
+11.9 at Delta/tau = 1.95). Only Gaussian regeneration works.
+
+**And the practice it was meant to replace was never miscalibrated.** The premise is
+that "LTS truncates the tails before the LRT sees them", but Stage 2 residualises ALL
+points -- the trim selects the *fit*, not the *test sample*. Pipeline null q95
+**5.459** against untrimmed clean-Gaussian **5.543** (B = 20,000 each); using the clean
+threshold gives size 0.0476 rather than 0.050. The July figure of 6.08 is reproduced
+exactly by clean draws at **m = 400**, so that gap looks like a sample-size difference,
+not a trimming effect.
+
+**The null is not a per-anchor, per-rung object.** It is invariant to rung
+(between-rung sd 0.049 against within-rung 0.123), to tau, to the trend and to the
+anchor: the observed per-anchor spread of the B = 300 threshold is 0.51 against 0.50
+for pure Monte-Carlo resampling. Experiment A's 5.50 / 5.35 / 4.60 is one threshold
+measured three times, and its deepest-rung 4.60 inflates size to 0.077. **Compute one
+calibration once at high B** -- 20x more accurate than B = 300 and 300x cheaper.
+
+**The minimum-mass rule is an anti-gate.** On a surface with no gate anywhere it
+declares the rung estimable at **0.990-0.995**; where EM finds a real but tiny minority
+(four crossers in 800) it *rejects*, at 0.748. The calibrated test is nominal exactly
+where min-mass is 0.99, so the deepest-estimable-rung convention should be defined by
+the test, not by pi_hat >= 0.05.
+
+**The dip's floor is a function of pi.** The ~2 sd figure is the equal-weight floor.
+Separation for power 0.5: 3 sd at pi = 0.50, 4 at 0.25, **6 at 0.10**, >7 at 0.05. At
+the placement the method targets (pi <= 0.10) the dip is inert. Its tabled p-value is
+additionally conservative through the pipeline (fires 0.000 on honest); calibrating it
+restores nominal size but buys no power and raises resonant-curvature FP from 0.058 to
+0.557. **Leave the dip on its tabled p-value.**
+
+**Detection power peaks where orientation does** -- d/sigma ~ 1.3-1.6, the same shell
+step 2 identified (power 0.628 at 1.28 and 0.720 at 1.54, against 0.080 at 2.56 and
+0.032 at 5.13). So the pi conflict is not orientation-versus-everything-else; it is the
+*ladder* versus everything else, since a geometric ladder topping out at the sweet spot
+necessarily puts its lower rungs where nothing is estimable.
+
+    python3 exp_bootstrap_calibration.py nulls     # ~15 min, 2 cores
+    python3 exp_bootstrap_calibration.py anchors   # ~4 min
+    python3 exp_bootstrap_calibration.py boot      # ~22 min
+    python3 exp_dip_floor.py ; python3 check_null_dependence.py
+    python3 verify_bootstrap.py                    # 10 checks, exit 0
+    python3 analyse_bootstrap.py ; python3 fig_bootstrap.py
+
+Outputs `bootstrap_nulls.csv` (40), `bootstrap_anchor_stats.csv` (10,800),
+`bootstrap_anchor_pvalues.csv` (960), `bootstrap_reference_thresholds.csv`,
+`dip_floor_rows.csv`, `fig_bootstrap.png`. All stages resumable via `_parts_*/`.
+
+`fast_em.py` is a batched rewrite of `gmm2_equalvar` for the null replicates: the
+equal-variance responsibility is `sigmoid(a + b*y)`, linear in the observation, so the
+(chains x points x components) tensor collapses and `sum(y)`, `sum(y^2)` are fixed
+across iterations. Verified against the reference over 60 residual shapes spanning LRT
+-0.02 to 218, max relative difference 5e-10.

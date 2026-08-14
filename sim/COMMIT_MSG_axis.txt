@@ -1,0 +1,87 @@
+Experiment T: axis dominance names the wrong feature, and t_hat's interval covers at zero
+
+Step 4 of the v5 critical path, plus the sec.16 interval-coverage deliverable, which
+arrived early because it had to. Ambient D = 20, intrinsic d = 2, frame supplied,
+by-design placement in the pi = 0.10 shell, planted threshold T = 5.0.
+
+Pooling returns a hyperplane; the claim an audit needs is "it routes on feature i above
+t_hat". The conversion fails in two independent ways, and both are repairable.
+
+THE DOMINANCE TEST IS OVER-PERMISSIVE. Stage 7 calibrates max_j |n_hat_j| against the
+permutation distribution. That null is structurally wrong: n_hat = U nu / ||U nu|| always
+lies in span(U), and permuting residuals WITHIN an anchor leaves the frame untouched, so
+permuted normals live in the same 2-D subspace. An axis-aligned gate that is visible at
+all FORCES the frame to contain that axis, so a permuted normal is cos(phi) u1 + sin(phi)
+u2 and |n_hat_i| = |cos phi|, whose q95 is sin(0.95 pi/2) = 0.9969. Measured thresholds
+0.86-0.999. The rule therefore reduces to "is the pooled orientation error below ~5-8
+degrees", which is not a test of axis alignment at all. Consequences, at N = 100:
+    theta      0     10     20     30     45     90   (true tilt off the axis, degrees)
+    perm   1.000  0.925  0.789  0.376  0.401  0.000   (dt = 2.5)
+At 20 degrees off-axis -- a third of the routing direction in other features -- it names
+a single feature 79% of the time. Every fire above theta = 0 is a WRONG claim, not a weak
+one. It is also under-powered where it matters: 0.05-0.09 at dt = 1.0, and only 0.56 at
+dt = 1.5, N = 100.
+
+THE OBVIOUS REPAIR IS WORSE, AND IT WAS MINE. Resampling anchors and asking whether the
+identity of the dominant coordinate is STABLE fires at ~1.000 at every tilt, including a
+fully oblique gate (0.953 at theta = 90). The argmax of a well-determined oblique normal
+is stably the largest of several comparable components. Stability is not validity.
+
+THE REFRAMING THAT WORKS. Axis dominance is an EQUIVALENCE claim, not a significance
+claim: what the audit needs is that the off-axis part is provably SMALL, so the burden
+belongs on the claimant. Bootstrap the anchors, form a one-sided upper confidence bound
+on the angle between n_hat and the candidate axis, and claim a feature only if that bound
+is below a stated tolerance. False-claim rate 0.000 at every tilt beyond tolerance, and
+the bound is an honest estimate of the tilt in its own right -- at dt = 5, N = 100 it
+reads 0.87 / 10.14 / 20.13 / 30.09 / 45.12 degrees against true tilts of 0 / 10 / 20 /
+30 / 45. Report the bound, not the binary.
+
+WHERE A FEATURE CAN BE NAMED AT ALL. Certified upper bound at theta = 0:
+    dt \ N        25     50    100    200
+    1.0         69.5   68.9   63.6   56.0     -> never; report the hyperplane
+    1.5         43.8   30.4   20.9   13.5     -> the real scaffold's regime
+    2.5          6.7    4.9    3.4    2.4
+    5.0          1.7    1.2    0.9    0.6
+
+THE INTERVAL ON t_hat COVERS AT 0.00, NOT 0.95, and gets WORSE with more anchors -- the
+signature of bias plus a shrinking interval. At dt = 1.5: coverage 0.232 / 0.000 / 0.000
+at N = 25 / 100 / 200 with a bias of -1.13 on a true 5.0. At dt = 2.5 it reaches 0.000 by
+N = 200. Even at dt = 5.0 it plateaus at 0.93 and never reaches nominal.
+
+TWO INDEPENDENT DEFECTS IN THE OFFSET.
+  (1) ORIGIN AMPLIFICATION, multiplicative and dominant. c_a = nu_a . t_a + t0_a uses each
+      anchor's OWN normal, so nu_a . t_a = (T +- d) cos(phi_a) + along sin(phi_a). The
+      second term averages away; the first does not, and E[cos phi] < 1 attenuates the
+      pooled offset toward the coordinate origin by a factor that leaves a bias
+      proportional to T. Measured bias/T against predicted E[cos phi] - 1: -0.29 vs -0.26
+      at dt = 1.5, -0.02 vs -0.06 at 2.5, -0.003 vs -0.002 at 5.0.
+      Experiment P measured the offset at c_true = 0, where a multiplicative bias is
+      invisible by construction. An estimator validated only at the origin has not been
+      validated for a threshold.
+  (2) THE LDA MIDPOINT, additive. t0 is the midpoint of the projected class means, which
+      is not the boundary unless the split is balanced: 0.780 sigma against a true 1.282
+      at pi = 0.10. It largely cancels under two-sided placement, and is the residual.
+
+THE REPAIR, and it is not a trade-off. Project each anchor's estimated boundary POINT onto
+the POOLED normal rather than averaging per-anchor offsets, and take the anchor-to-
+boundary distance from the validated crossing law d_hat = -sigma Phi^-1(pi_hat) rather
+than the LDA midpoint -- direction from separability (validated unbiased), distance from
+the crossing law (validated r = 0.996). Coverage 0.945-0.998 across every cell, and the
+interval is ~5x NARROWER (0.127 against 0.691 at dt = 1.5, N = 200).
+
+v5 sec.13(c) already contains both routes to the offset but calls their comparison a
+specification diagnostic, on the grounds that they agree "by construction under a
+correctly specified model". They do not: they differ systematically whenever pi is not
+0.5, and the classifier route is the biased one. The offset-agreement check is detecting
+a real defect in one of its own arms.
+
+SCOPE. Anchor placement is by design throughout, and Experiment P showed geometric
+pooling is dead under random placement -- so every number here is conditional on a
+boundary-seeking rule that does not exist. The frame is supplied and exact; an estimated
+frame will not contain the gate normal, and the off-frame component is unrecoverable,
+which will inflate the certified bound by an amount not measured here. The 10-degree
+tolerance is a placeholder. Coverage is measured for t_hat only, at theta = 0, under
+Gaussian noise, with one planted boundary.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_017TergaVdinWVoWAJVjEy1o

@@ -1,0 +1,112 @@
+Experiment B: the full-pipeline bootstrap is both wrong and unnecessary
+
+Closes the sec.17 open item ("no full-pipeline bootstrap yet") and the Stage-3
+calibration item in sec.10 of boundary_recovery_v5. Run at B = 300 as registered,
+against a B = 20,000 reference null. Both halves of the registered recipe fail, in
+opposite directions, and four further results came out of the same harness.
+
+THE RECIPE DOES NOT PRODUCE A NULL. Regenerating responses from resampled INLIER
+residuals inflates the null LRT median from a true 0.65 to 67.79 (q95 91.65), so every
+anchor returns p = 1.000 on honest and gated surfaces alike. The mechanism is shape,
+not scale: the inlier set is the truncated middle 75% of the residuals (kurtosis 2.11
+against the noise's 2.99), and feeding it back through a pipeline that trims again
+compounds the deformation, at which point an equal-variance two-component mixture fits
+a flat-topped sample far better than one Gaussian does. Resampling ALL residuals fails
+differently -- under a gate it resamples the gate's own bimodality into the null
+(median 11.91 at Delta/tau = 1.95 against 1.08 on honest), also firing 0.000. Only
+Gaussian regeneration works, and the scale of the regenerated noise is provably
+irrelevant (LTS is scale-equivariant, both tests scale-invariant).
+
+AND THE PRACTICE IT WAS MEANT TO REPLACE WAS NEVER MISCALIBRATED. The stated premise
+is that "LTS truncates the tails before the LRT sees them". It does not: Stage 2
+residualises ALL points against the refit plane, so the trim selects the FIT, not the
+TEST SAMPLE. At B = 20,000 each:
+    pipeline null        median 0.657   q95 5.459   q99 8.622
+    clean, untrimmed     median 0.702   q95 5.543   q99 8.905
+Using the clean q95 on the pipeline's own null gives size 0.0476 rather than 0.050.
+The July figure of 6.08 is reproduced exactly by clean draws at m = 400, so that gap
+looks like a sample-size difference, not a trimming effect -- suggestive, since the
+July m was not recorded. The null does drift weakly with m; calibrate at the deployed m.
+
+THE NULL IS NOT PER-ANCHOR OR PER-RUNG. Between-rung sd of q95 is 0.049 against a
+within-rung replicate sd of 0.123, and it is invariant to a 10x increase and 100x
+decrease in tau, to a 100x trend and to no trend at all -- as it must be, since the
+residual is invariant to anything in the span of [1, Z]. The observed per-anchor spread
+of the B = 300 threshold is 0.51 against 0.50 for pure Monte-Carlo resampling of the
+reference: ALL of it is noise, there is no anchor structure to condition on. So task
+9's 5.50 / 5.35 / 4.60 is one threshold measured three times, and the spread is not
+free -- the deepest-rung 4.60 inflates size to 0.077. One calibration computed once at
+high B is 20x more accurate than B = 300 and 300x cheaper. B = 300's own q95 has a
+2.5-97.5 range of 4.47 to 6.51 around a true 5.46.
+
+Level yes, p-value no: the level is exact (0.050 over 300 honest anchor-rungs) and
+p-values are uniform below ~0.8, but 16.7% pile up at 1.000 because the equal-variance
+LRT has an atom at zero under H0 (19.9% of honest anchors, matching the null's 19.9%).
+Usable as tests at a fixed level, not as evidence measures.
+
+THE MINIMUM-MASS RULE IS AN ANTI-GATE. Carried from 125555a and now measured. On a
+surface with NO gate anywhere it declares the rung estimable at 0.990 / 0.995 / 0.990;
+at gated rungs the ball never reaches (d/sigma = 5.13, true pi = 0) it passes at 0.995
+-0.998. It is not a gate, it is very nearly a constant. Worse, it is anti-correlated
+with the truth: at Delta/tau = 5, d/sigma = 2.56 -- about four real crossers in 800 --
+it passes only 0.748, because EM finds the real minority, pi_hat lands below 0.05 and
+the rule rejects. The rule fails when EM is right and passes when EM splits noise. The
+calibrated test is nominal exactly where min-mass is 0.99, so the deepest-estimable-
+rung convention should be defined by the test, and then it does self-enforce.
+
+THE DIP'S FLOOR IS A FUNCTION OF PI. The ~2 sd figure in sec.11 is the EQUAL-WEIGHT
+floor. Separation at which the calibrated dip reaches power 0.5, n = 800:
+    pi     0.50   0.35   0.25   0.10   0.05
+    sep    3      4      4      6      >7
+Anchor placement targets pi <= 0.10 (step 2), so at its own operating point the dip is
+inert below ~6 sd -- three times the stated floor, against a real scaffold at 1.6-1.95.
+That is the structural reason behind 125555a's "the dip contributes nothing"; dip-OR-LRT
+== LRT is a property of low pi, not of that separation. Separately, the dip's tabled
+p-value fires at 0.000 on honest anchors at every rung; calibrating it through the
+pipeline restores nominal size but buys no power (0.033-0.062 on every gated cell) and
+raises resonant-curvature FP from 0.058 to 0.557. Leave the dip on its tabled p-value.
+
+DETECTION POWER PEAKS WHERE ORIENTATION DOES, so the pi conflict is the LADDER's, not
+orientation's. Power against distance, Delta/tau = 2.5:
+    d/sigma   0.39   0.77   1.28   1.54   2.56   5.13
+    power     0.158  0.200  0.628  0.720  0.080  0.032
+The peak at d/sigma ~ 1.3-1.6 is the same shell step 2 identified as orientation-useful
+and the same region the distance estimator prefers. Detection, distance and orientation
+all want one rung and it is the same rung. What conflicts is the ladder: anchored with
+its top rung at the sweet spot it necessarily puts the lower rungs at d/sigma 2.56 and
+5.13, where nothing is estimable and power is at size. At pi_top = 0.35 the ordering
+inverts and the DEEPEST rung becomes the good one (0.720 at d/sigma 1.54) while the top
+rung sits at 0.158, too close for LTS to have a majority branch. The design variable is
+where the sweet spot sits in the ladder, not which pi to prefer -- a ladder climbing
+away from the boundary keeps every rung estimable. Not yet run.
+
+Power at the real target for the record: Delta/tau = 1.95 gives 0.203 at d/sigma = 1.28,
+and 1.5 gives 0.065 -- far below the 0.42-0.54 sec.11 quotes at 1.5 sd, because that
+figure is at pi = 0.25 and placement now targets pi <= 0.10. Pooling is the detector.
+
+MACHINERY. sim/fast_em.py is a batched rewrite of gmm2_equalvar for the null replicates:
+the equal-variance responsibility is sigmoid(a + b*y), linear in the observation, so the
+(chains x points x components) tensor collapses to a few (chains x points) passes and
+sum(y), sum(y^2) are fixed across iterations. Same inits, update order, convergence test
+and best-of-inits rule, including the reference's +1e-12 on the component counts.
+Verified against the reference over 60 residual shapes spanning LRT -0.02 to 218: max
+relative difference 5e-10. Blocked at 250 replicates (B = 6000 costs 140 s unblocked,
+40 s blocked; identical at every block size). verify_bootstrap.py runs 10 checks and
+exits 0.
+
+Three defects noted, not fixed here: exp_a_invariance.py and exp_p_pooling.py load and
+write through hardcoded /tmp paths so neither runs from a fresh checkout;
+exp_p_pooling.py:313 has a cancelling +mean-mean that looks like a half-applied centring
+correction; and gmm2_equalvar's convergence test is relative to |ll|, which shifts by
+-n log k under rescaling, so the LRT is not exactly scale-invariant in implementation
+(1.6e-3 over a factor of 2, negligible against a threshold of 5.46).
+
+SCOPE. Intrinsic d = 2, frame supplied, Stage 0 deferred, density filter a no-op -- so
+"full pipeline" here is trim -> refit -> residualise -> both tests. The filter branch is
+uncalibrated, the separability guard still has no calibrated null (and sec.8 shows
+curvature fires the LRT at up to 1.000, making the guard the binding component), and
+the parametric calibration assumes Gaussian noise -- the nonparametric alternatives that
+would not are exactly the ones ruled out here.
+
+Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_017TergaVdinWVoWAJVjEy1o
