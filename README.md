@@ -1,4 +1,4 @@
-# detect-recover-interpret
+# latent-routing-recovery
 
 Black-box detection and recovery of a hidden decision boundary inside a deployed model —
 via on-manifold probing and the *modality* of the response distribution, not its spread.
